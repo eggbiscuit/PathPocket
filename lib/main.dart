@@ -1,34 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'core/theme.dart';
-import 'features/chat/presentation/chat_provider.dart';
-import 'features/chat/presentation/chat_screen.dart';
+import 'app.dart';
+import 'core/storage/app_database.dart';
+import 'core/storage/secure_token_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
+
+  final db = AppDatabase();
+  final tokenStore = createSecureTokenStore();
 
   runApp(
     ProviderScope(
       overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
+        databaseProvider.overrideWithValue(db),
+        secureTokenStoreProvider.overrideWithValue(tokenStore),
       ],
       child: const PathPocketApp(),
     ),
   );
-}
-
-class PathPocketApp extends StatelessWidget {
-  const PathPocketApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'PathPocket',
-      theme: buildAppTheme(),
-      home: const ChatScreen(),
-    );
-  }
 }

@@ -31,26 +31,51 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management
   flutter_riverpod: ^3.0.0
-  riverpod_annotation: ^3.0.0
+
+  # Networking
   dio: ^5.7.0
-  flutter_markdown: ^0.7.4
+
+  # Routing
+  go_router: ^14.6.0
+
+  # Persistence (relational, per-user isolation)
+  drift: ^2.20.0
+  drift_flutter: ^0.2.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # Settings / non-user-scoped preferences
   shared_preferences: ^2.3.0
+
+  # Auth token storage
+  flutter_secure_storage: ^9.2.2
+
+  # Markdown rendering (flutter_markdown_plus — active fork, supports Flutter 3.27+;
+  # gpt_markdown 1.1.7 has a Flutter 3.32 Radio widget incompatibility)
+  flutter_markdown_plus: ^1.0.7
+  markdown: ^7.3.0
+
+  # Web platform interop (BroadcastChannel for multi-tab sync)
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+  # Mocks + integration test SSE server
+  mocktail: ^1.0.4
+  shelf: ^1.4.1
+
+  # Drift code generation
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.13
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

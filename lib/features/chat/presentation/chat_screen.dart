@@ -2,130 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
+import '../domain/message.dart';
 import 'chat_provider.dart';
+import 'citation_drawer.dart';
 import 'message_bubble.dart';
+import 'smart_scroll_controller.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, required this.conversationId});
+
+  final String conversationId;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
-  final TextEditingController _inputController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _input = TextEditingController();
+  late final SmartScrollController _smartScroll;
   final FocusNode _inputFocus = FocusNode();
-  String? _shownError;
+  String? _lastErrorShown;
+  int _prevMessageCount = 0;
+  String _prevLastContent = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _smartScroll = SmartScrollController();
+    _smartScroll.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
-    _inputController.dispose();
-    _scrollController.dispose();
+    _input.dispose();
+    _smartScroll.dispose();
     _inputFocus.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
   void _handleSend() {
-    final text = _inputController.text.trim();
+    final text = _input.text.trim();
     if (text.isEmpty) return;
-    _inputController.clear();
-    ref.read(chatProvider.notifier).sendMessage(text);
+    _input.clear();
+    ref
+        .read(chatProvider(widget.conversationId).notifier)
+        .sendMessage(text);
     _inputFocus.requestFocus();
-  }
-
-  void _confirmClear() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('清空对话'),
-        content: const Text('确定要清空当前所有对话吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('清空'),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) {
-      ref.read(chatProvider.notifier).clearChat();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(chatProvider);
+    final state = ref.watch(chatProvider(widget.conversationId));
 
-    ref.listen(chatProvider, (prev, next) {
-      if (next.messages.length != (prev?.messages.length ?? 0) ||
-          (next.messages.isNotEmpty &&
-              prev != null &&
-              prev.messages.isNotEmpty &&
-              next.messages.last.content !=
-                  prev.messages.last.content)) {
-        _scrollToBottom();
+    ref.listen(chatProvider(widget.conversationId), (prev, next) {
+      final newCount = next.messages.length;
+      final newContent =
+          next.messages.isNotEmpty ? next.messages.last.content : '';
+
+      if (newCount != _prevMessageCount || newContent != _prevLastContent) {
+        _smartScroll.onNewContent();
+        _prevMessageCount = newCount;
+        _prevLastContent = newContent;
       }
 
       final err = next.errorMessage;
-      if (err != null && err != _shownError) {
-        _shownError = err;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
+      if (err != null && err != _lastErrorShown) {
+        _lastErrorShown = err;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
               backgroundColor: AppColors.error,
               content: Text(err),
               behavior: SnackBarBehavior.floating,
-            ),
-          );
+            ));
+        });
       } else if (err == null) {
-        _shownError = null;
+        _lastErrorShown = null;
       }
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'PathPocket',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            tooltip: '清空对话',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: state.messages.isEmpty ? null : _confirmClear,
-          ),
+      body: Column(
+        children: [
+          Expanded(child: _buildList(state)),
+          if (state.isLoading) _buildThinkingBar(),
+          _buildInputBar(state.isLoading),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: _buildMessageList(state)),
-            if (state.isLoading) _buildThinkingHint(),
-            _buildInputBar(state.isLoading),
-          ],
-        ),
-      ),
+      floatingActionButton: _smartScroll.showJumpFab
+          ? FloatingActionButton.small(
+              tooltip: '回到最新',
+              onPressed: _smartScroll.jumpToBottom,
+              child: const Icon(Icons.keyboard_arrow_down),
+            )
+          : null,
     );
   }
 
-  Widget _buildMessageList(ChatState state) {
+  Widget _buildList(ChatState state) {
     if (state.messages.isEmpty) {
       return const Center(
         child: Padding(
@@ -138,22 +114,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       );
     }
+
+    final streaming = state.isLoading;
+
     return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      controller: _smartScroll.scrollController,
+      padding: const EdgeInsets.only(top: 12, bottom: 12),
       itemCount: state.messages.length,
-      itemBuilder: (_, i) => MessageBubble(message: state.messages[i]),
+      itemBuilder: (_, i) {
+        final msg = state.messages[i];
+        final isLastAssistant = !streaming &&
+            i == state.messages.length - 1 &&
+            msg.role == MessageRole.assistant;
+
+        return MessageBubble(
+          message: msg,
+          conversationId: widget.conversationId,
+          onStop: streaming && msg.role == MessageRole.assistant
+              ? () => ref
+                  .read(chatProvider(widget.conversationId).notifier)
+                  .stopGeneration()
+              : null,
+          onRegenerate: isLastAssistant
+              ? () => ref
+                  .read(chatProvider(widget.conversationId).notifier)
+                  .regenerate(msg.id)
+              : null,
+        );
+      },
     );
   }
 
-  Widget _buildThinkingHint() {
+  Widget _buildThinkingBar() {
     return Container(
-      width: double.infinity,
+      alignment: Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          SizedBox(
+          const SizedBox(
             width: 12,
             height: 12,
             child: CircularProgressIndicator(
@@ -161,10 +159,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               color: AppColors.primary,
             ),
           ),
-          SizedBox(width: 8),
-          Text(
+          const SizedBox(width: 8),
+          const Text(
             'AI 正在思考...',
             style: TextStyle(color: AppColors.timestamp, fontSize: 12),
+          ),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: () => ref
+                .read(chatProvider(widget.conversationId).notifier)
+                .stopGeneration(),
+            icon: const Icon(Icons.stop, size: 14),
+            label: const Text('停止', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
           ),
         ],
       ),
@@ -176,14 +186,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFEAEAEA), width: 1)),
+        border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: TextField(
-              controller: _inputController,
+              controller: _input,
               focusNode: _inputFocus,
               enabled: !isLoading,
               minLines: 1,
@@ -223,10 +233,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         child: const Padding(
           padding: EdgeInsets.all(12),
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
         ),
       );
     }
@@ -241,6 +248,180 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           height: 44,
           child: Icon(Icons.send, color: Colors.white, size: 20),
         ),
+      ),
+    );
+  }
+}
+
+/// Shows a citation bottom sheet / side panel.
+class CitationDrawerHost extends ConsumerWidget {
+  const CitationDrawerHost({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final drawerState = ref.watch(citationDrawerProvider);
+
+    if (!drawerState.open) return child;
+
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
+
+    if (isWide) {
+      return Row(
+        children: [
+          Expanded(child: child),
+          const VerticalDivider(width: 1),
+          SizedBox(
+            width: 340,
+            child: _CitationPanel(
+              citations: drawerState.citations,
+              focusId: drawerState.focus?.citationId,
+              onClose: () => ref.read(citationDrawerProvider.notifier).close(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        child,
+        DraggableScrollableSheet(
+          initialChildSize: 0.45,
+          minChildSize: 0.2,
+          maxChildSize: 0.8,
+          builder: (_, ctrl) => _CitationPanel(
+            citations: drawerState.citations,
+            focusId: drawerState.focus?.citationId,
+            scrollController: ctrl,
+            onClose: () => ref.read(citationDrawerProvider.notifier).close(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CitationPanel extends StatelessWidget {
+  const _CitationPanel({
+    required this.citations,
+    required this.focusId,
+    required this.onClose,
+    this.scrollController,
+  });
+
+  final List<Citation> citations;
+  final String? focusId;
+  final VoidCallback onClose;
+  final ScrollController? scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+            child: Row(
+              children: [
+                const Text(
+                  '参考文献',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: onClose,
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              controller: scrollController,
+              padding: const EdgeInsets.all(12),
+              itemCount: citations.length,
+              separatorBuilder: (_, __) => const Divider(height: 16),
+              itemBuilder: (_, i) {
+                final c = citations[i];
+                final isFocused = c.id == focusId;
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isFocused
+                        ? AppColors.primary.withValues(alpha: 0.08)
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 20,
+                            height: 20,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              c.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        c.snippet,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.aiBubbleText,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (c.source != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            c.source!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.timestamp,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
