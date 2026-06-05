@@ -6,6 +6,7 @@ import 'package:markdown/markdown.dart' as md;
 
 import '../../../core/theme.dart';
 import '../domain/message.dart';
+import '../../image_input/presentation/image_viewer_screen.dart';
 import 'chat_provider.dart';
 import 'citation_drawer.dart';
 
@@ -118,6 +119,16 @@ class MessageBubble extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (message.images.isNotEmpty)
+            _ImageAttachmentRow(
+              images: message.images,
+              onTap: (img) => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ImageViewerScreen.fromUri(uri: img.uri),
+                ),
+              ),
+            ),
           if (message.content.isEmpty && isStreaming)
             const SizedBox(
               width: 14,
@@ -230,6 +241,50 @@ class MessageBubble extends ConsumerWidget {
 
 /// MarkdownBody wrapper that turns [N] tags into tappable chips via
 /// a custom inline syntax that encodes the citation index as a link target.
+class _ImageAttachmentRow extends StatelessWidget {
+  const _ImageAttachmentRow({required this.images, required this.onTap});
+  final List<ImageAttachment> images;
+  final void Function(ImageAttachment) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: images.map((img) => _thumb(context, img)).toList(),
+      ),
+    );
+  }
+
+  Widget _thumb(BuildContext context, ImageAttachment img) {
+    final Widget image = img.uri.startsWith('data:')
+        ? Image.memory(
+            Uri.parse(img.uri.replaceFirst('data:', 'data:application/octet-stream;'))
+                .data!
+                .contentAsBytes(),
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+          )
+        : Image.network(
+            img.uri,
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+          );
+
+    return GestureDetector(
+      onTap: () => onTap(img),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: image,
+      ),
+    );
+  }
+}
+
 class _MarkdownWithCitations extends StatelessWidget {
   const _MarkdownWithCitations({
     required this.content,

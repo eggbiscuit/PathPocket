@@ -63,6 +63,14 @@ dependencies:
   # Web platform interop (BroadcastChannel for multi-tab sync)
   web: ^1.1.0
 
+  # Image input — Phase 2
+  image_picker: ^1.1.2          # camera + gallery (iOS / Android)
+  file_picker: ^8.1.7           # file dialog (Web / Desktop)
+  super_clipboard: ^0.8.20      # cross-platform clipboard (Ctrl+V paste image)
+  super_drag_and_drop: ^0.8.20  # drag-and-drop (Web + Desktop)
+  crop_your_image: ^2.0.0       # ROI cropper (pure Dart, works on Web)
+  photo_view: ^0.15.0           # full-screen pinch-zoom viewer
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

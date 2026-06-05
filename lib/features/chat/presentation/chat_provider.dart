@@ -9,12 +9,11 @@ import '../../../core/storage/app_database.dart' as db;
 import '../../../core/storage/app_database.dart' show AppDatabase, databaseProvider;
 import '../../auth/presentation/auth_provider.dart';
 import '../../conversations/data/conversation_repository.dart';
+import '../../image_input/domain/pending_image.dart';
 import '../data/chat_repository.dart';
 import '../domain/message.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {
-  // Mock by default during Phase 1. Swap to OpenAIChatRepository (or a real
-  // backend repository) in main.dart via ProviderScope.overrides when ready.
   return MockChatRepository();
 });
 
@@ -24,22 +23,26 @@ class ChatState {
     this.messages = const [],
     this.isLoading = false,
     this.errorMessage,
+    this.pendingImages = const [],
   });
 
   final List<Message> messages;
   final bool isLoading;
   final String? errorMessage;
+  final List<PendingImage> pendingImages;
 
   ChatState copyWith({
     List<Message>? messages,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
+    List<PendingImage>? pendingImages,
   }) {
     return ChatState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      pendingImages: pendingImages ?? this.pendingImages,
     );
   }
 }
@@ -126,10 +129,23 @@ class ChatNotifier extends Notifier<ChatState> {
 
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || state.isLoading) return;
+    if (trimmed.isEmpty && state.pendingImages.isEmpty) return;
+    if (state.isLoading) return;
 
     final userId = _userId;
-    if (userId == null) return; // shouldn't happen — router guards this
+    if (userId == null) return;
+
+    // Convert PendingImage → ImageAttachment for the domain model.
+    final attachments = state.pendingImages
+        .map((p) => ImageAttachment(
+              id: p.id,
+              uri: p.dataUri,
+              mimeType: p.mimeType,
+              width: p.width,
+              height: p.height,
+              roi: p.roi,
+            ))
+        .toList();
 
     final userMsg = Message(
       id: _newId('m_u'),
@@ -138,6 +154,7 @@ class ChatNotifier extends Notifier<ChatState> {
       content: trimmed,
       timestamp: DateTime.now(),
       status: MessageStatus.done,
+      images: attachments,
     );
     final placeholder = Message(
       id: _newId('m_a'),
@@ -156,6 +173,7 @@ class ChatNotifier extends Notifier<ChatState> {
       messages: [...state.messages, userMsg, placeholder],
       isLoading: true,
       clearError: true,
+      pendingImages: const [], // clear after attaching to message
     );
 
     await _runStream(placeholder.id, userId);
@@ -209,6 +227,23 @@ class ChatNotifier extends Notifier<ChatState> {
     next[i] = next[i].copyWith(feedback: feedback);
     state = state.copyWith(messages: next);
     await _db.updateMessageFeedback(messageId, feedback.name);
+  }
+
+  void addPendingImage(PendingImage image) {
+    state = state.copyWith(
+      pendingImages: [...state.pendingImages, image],
+    );
+  }
+
+  void removePendingImage(String imageId) {
+    state = state.copyWith(
+      pendingImages:
+          state.pendingImages.where((i) => i.id != imageId).toList(),
+    );
+  }
+
+  void clearPendingImages() {
+    state = state.copyWith(pendingImages: const []);
   }
 
   Future<void> _runStream(String assistantId, String userId) async {

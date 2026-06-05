@@ -119,6 +119,12 @@ class MockChatRepository implements ChatRepository {
     '观察到的特征符合**慢性炎症伴轻度上皮异型** [1]。可考虑短期随访 + 复检。',
   ];
 
+  static const _imageReplies = <String>[
+    '已收到您发送的病理图像 [1]。图像显示：局部区域可见**核分裂象增多**，提示细胞增殖活跃，建议结合免疫组化进一步确认。',
+    '根据您提供的切片图像 [1]，可观察到**腺体结构不规则**，部分细胞极向消失，符合低级别上皮内瘤变特征。',
+    '图像中可见**间质纤维化**伴慢性炎细胞浸润 [1]，整体结构尚保留。建议加做 CD68 染色以明确巨噬细胞分布。',
+  ];
+
   static const _mockCitation = Citation(
     id: 'mock-1',
     title: 'WHO 消化系统肿瘤分类（第 5 版）',
@@ -132,7 +138,14 @@ class MockChatRepository implements ChatRepository {
     List<Message> messages, {
     CancelToken? cancelToken,
   }) async* {
-    final reply = _stockReplies[_random.nextInt(_stockReplies.length)];
+    // Pick a reply template based on whether the last user message has images.
+    final lastUser = messages.lastWhere(
+      (m) => m.role == MessageRole.user,
+      orElse: () => messages.first,
+    );
+    final hasImages = lastUser.images.isNotEmpty;
+    final pool = hasImages ? _imageReplies : _stockReplies;
+    final reply = pool[_random.nextInt(pool.length)];
     final tokens = _tokenize(reply);
 
     for (final token in tokens) {

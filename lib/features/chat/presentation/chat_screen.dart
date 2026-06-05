@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme.dart';
 import '../domain/message.dart';
+import '../../image_input/presentation/image_picker_bar.dart';
+import '../../image_input/presentation/image_viewer_screen.dart';
 import 'chat_provider.dart';
 import 'citation_drawer.dart';
 import 'message_bubble.dart';
@@ -181,43 +183,93 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildInputBar(bool isLoading) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
+  void _showImagePicker(BuildContext context) async {
+    final result = await showModalBottomSheet<dynamic>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _input,
-              focusNode: _inputFocus,
-              enabled: !isLoading,
-              minLines: 1,
-              maxLines: 5,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _handleSend(),
-              decoration: InputDecoration(
-                hintText: isLoading ? '等待回复中...' : '请输入你的问题',
-                filled: true,
-                fillColor: const Color(0xFFF5F5F5),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
+      builder: (_) => const ImagePickerSheet(),
+    );
+    if (result == null || !mounted) return;
+    ref
+        .read(chatProvider(widget.conversationId).notifier)
+        .addPendingImage(result);
+  }
+
+  Widget _buildInputBar(bool isLoading) {
+    final pendingImages =
+        ref.watch(chatProvider(widget.conversationId).select((s) => s.pendingImages));
+
+    return ImageDropTarget(
+      onDropped: (img) => ref
+          .read(chatProvider(widget.conversationId).notifier)
+          .addPendingImage(img),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (pendingImages.isNotEmpty)
+              _PendingImageStrip(
+                images: pendingImages,
+                onRemove: (id) => ref
+                    .read(chatProvider(widget.conversationId).notifier)
+                    .removePendingImage(id),
+                onTap: (img) => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        ImageViewerScreen.fromBytes(bytes: img.bytes),
+                  ),
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: '附加图片',
+                    icon: const Icon(Icons.attach_file),
+                    color: AppColors.primary,
+                    onPressed:
+                        isLoading ? null : () => _showImagePicker(context),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _input,
+                      focusNode: _inputFocus,
+                      enabled: !isLoading,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _handleSend(),
+                      decoration: InputDecoration(
+                        hintText: isLoading ? '等待回复中...' : '请输入你的问题',
+                        filled: true,
+                        fillColor: const Color(0xFFF5F5F5),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildSendButton(isLoading),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _buildSendButton(isLoading),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -248,6 +300,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           height: 44,
           child: Icon(Icons.send, color: Colors.white, size: 20),
         ),
+      ),
+    );
+  }
+}
+
+/// Horizontal strip showing pending images with remove buttons.
+class _PendingImageStrip extends StatelessWidget {
+  const _PendingImageStrip({
+    required this.images,
+    required this.onRemove,
+    required this.onTap,
+  });
+
+  final List images;
+  final void Function(String id) onRemove;
+  final void Function(dynamic img) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 80,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final img = images[i];
+          return GestureDetector(
+            onTap: () => onTap(img),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    img.bytes,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () => onRemove(img.id),
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close,
+                          size: 12, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
