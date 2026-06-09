@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:js_interop';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:web/web.dart' as web;
+
+import 'tab_sync_platform_stub.dart'
+    if (dart.library.html) 'tab_sync_platform_web.dart' as tab_sync_platform;
 
 /// Events broadcast across browser tabs.
 sealed class TabSyncEvent {
@@ -58,41 +57,8 @@ class _NoopTabSync implements TabSync {
   void dispose() {}
 }
 
-class _WebTabSync implements TabSync {
-  _WebTabSync() : _channel = web.BroadcastChannel('pathpocket-tab-sync') {
-    _channel.onmessage = ((web.MessageEvent e) {
-      try {
-        final raw = (e.data as Object?)?.toString();
-        if (raw == null) return;
-        final json = jsonDecode(raw) as Map<String, dynamic>;
-        final event = TabSyncEvent.fromJson(json);
-        if (event != null) _controller.add(event);
-      } catch (_) {
-        // swallow malformed messages
-      }
-    }).toJS;
-  }
-
-  final web.BroadcastChannel _channel;
-  final StreamController<TabSyncEvent> _controller =
-      StreamController<TabSyncEvent>.broadcast();
-
-  @override
-  Stream<TabSyncEvent> get events => _controller.stream;
-
-  @override
-  void publish(TabSyncEvent event) {
-    _channel.postMessage(jsonEncode(event.toJson()).toJS);
-  }
-
-  @override
-  void dispose() {
-    _controller.close();
-    _channel.close();
-  }
-}
-
-TabSync createTabSync() => kIsWeb ? _WebTabSync() : _NoopTabSync();
+TabSync createTabSync() =>
+    tab_sync_platform.createPlatformTabSync(_NoopTabSync.new) as TabSync;
 
 final tabSyncProvider = Provider<TabSync>((ref) {
   final sync = createTabSync();
