@@ -74,6 +74,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create config from example
+        run: cp lib/core/config.example.dart lib/core/config.dart
+
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
