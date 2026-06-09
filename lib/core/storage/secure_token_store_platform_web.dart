@@ -25,5 +25,5 @@ class _WebSessionTokenStore implements SecureTokenStore {
   }
 }
 
-SecureTokenStore createPlatformSecureTokenStore(SecureTokenStore _mobileStore) =>
+SecureTokenStore createPlatformSecureTokenStore(SecureTokenStore _) =>
     _WebSessionTokenStore();

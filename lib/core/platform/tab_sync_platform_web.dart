@@ -40,5 +40,5 @@ class _WebTabSync implements TabSync {
   }
 }
 
-TabSync createPlatformTabSync(TabSync Function() _fallbackFactory) =>
+TabSync createPlatformTabSync(TabSync Function() _) =>
     _WebTabSync();
