@@ -1,7 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:web/web.dart' as web;
+
+import 'secure_token_store_platform_stub.dart'
+    if (dart.library.html) 'secure_token_store_platform_web.dart'
+    as secure_token_store_platform;
 
 /// Cross-platform secure(-ish) token storage.
 ///
@@ -38,33 +40,10 @@ class _MobileSecureTokenStore implements SecureTokenStore {
   Future<void> clear() => _storage.deleteAll();
 }
 
-class _WebSessionTokenStore implements SecureTokenStore {
-  @override
-  Future<String?> read(String key) async {
-    final value = web.window.sessionStorage.getItem(key);
-    return value;
-  }
-
-  @override
-  Future<void> write(String key, String value) async {
-    web.window.sessionStorage.setItem(key, value);
-  }
-
-  @override
-  Future<void> delete(String key) async {
-    web.window.sessionStorage.removeItem(key);
-  }
-
-  @override
-  Future<void> clear() async {
-    web.window.sessionStorage.clear();
-  }
-}
-
-SecureTokenStore createSecureTokenStore() {
-  if (kIsWeb) return _WebSessionTokenStore();
-  return _MobileSecureTokenStore();
-}
+SecureTokenStore createSecureTokenStore() =>
+    secure_token_store_platform.createPlatformSecureTokenStore(
+      _MobileSecureTokenStore(),
+    ) as SecureTokenStore;
 
 final secureTokenStoreProvider = Provider<SecureTokenStore>((ref) {
   throw UnimplementedError(
