@@ -1,30 +1,50 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic smoke test: login screen renders when user is not authenticated.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pathpocket/main.dart';
+import 'package:pathpocket/app.dart';
+import 'package:pathpocket/core/storage/app_database.dart';
+import 'package:pathpocket/core/storage/secure_token_store.dart';
+import 'package:drift/native.dart';
+
+/// In-memory token store for tests — no platform channels needed.
+class _InMemoryTokenStore implements SecureTokenStore {
+  final Map<String, String> _store = {};
+
+  @override
+  Future<String?> read(String key) async => _store[key];
+
+  @override
+  Future<void> write(String key, String value) async => _store[key] = value;
+
+  @override
+  Future<void> delete(String key) async => _store.remove(key);
+
+  @override
+  Future<void> clear() async => _store.clear();
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('login screen renders when not authenticated',
+      (WidgetTester tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          secureTokenStoreProvider.overrideWithValue(_InMemoryTokenStore()),
+        ],
+        child: const PathPocketApp(),
+      ),
+    );
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('PathPocket'), findsWidgets);
+    expect(find.text('病理问答助手'), findsOneWidget);
+    expect(find.byIcon(Icons.phone), findsOneWidget);
   });
 }

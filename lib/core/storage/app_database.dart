@@ -78,7 +78,15 @@ class Images extends Table {
 @DriftDatabase(tables: [Users, Conversations, Messages, Citations, Images])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'pathpocket'));
+      : super(executor ?? _defaultExecutor());
+
+  static QueryExecutor _defaultExecutor() => driftDatabase(
+        name: 'pathpocket',
+        web: DriftWebOptions(
+          sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+          driftWorker: Uri.parse('drift_worker.js'),
+        ),
+      );
 
   @override
   int get schemaVersion => 1;
