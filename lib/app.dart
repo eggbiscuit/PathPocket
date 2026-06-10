@@ -15,9 +15,13 @@ class PathPocketApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final fontScale = ref.watch(fontScaleProvider);
 
+    final baseMediaQuery = MediaQueryData.fromView(View.of(context));
+    final systemScale = baseMediaQuery.textScaler.scale(1.0);
+
     return MediaQuery(
-      data: MediaQueryData.fromView(View.of(context))
-          .copyWith(textScaler: TextScaler.linear(fontScale)),
+      data: baseMediaQuery.copyWith(
+        textScaler: TextScaler.linear(systemScale * fontScale),
+      ),
       child: MaterialApp.router(
         title: 'PathPocket',
         theme: buildAppTheme(),
