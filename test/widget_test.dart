@@ -3,10 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pathpocket/app.dart';
 import 'package:pathpocket/core/storage/app_database.dart';
 import 'package:pathpocket/core/storage/secure_token_store.dart';
+import 'package:pathpocket/features/settings/presentation/font_scale_provider.dart';
+import 'package:pathpocket/features/settings/presentation/theme_provider.dart';
 import 'package:drift/native.dart';
 
 /// In-memory token store for tests — no platform channels needed.
@@ -29,6 +32,9 @@ class _InMemoryTokenStore implements SecureTokenStore {
 void main() {
   testWidgets('login screen renders when not authenticated',
       (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -37,6 +43,8 @@ void main() {
         overrides: [
           databaseProvider.overrideWithValue(db),
           secureTokenStoreProvider.overrideWithValue(_InMemoryTokenStore()),
+          themeModePrefsOverride(prefs),
+          fontScalePrefsOverride(prefs),
         ],
         child: const PathPocketApp(),
       ),
