@@ -64,6 +64,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
         } else {
           setState(() => _partial = text);
         }
+      },
       listenOptions: SpeechListenOptions(
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
