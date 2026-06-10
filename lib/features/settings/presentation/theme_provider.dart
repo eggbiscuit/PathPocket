@@ -41,9 +41,5 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 );
 
 /// Call this in ProviderScope.overrides to inject SharedPreferences.
-// Returns the override to pass into ProviderScope.overrides.
-// Dart infers the correct Riverpod internal type automatically.
-// ignore: prefer_expression_function_bodies
-themeModePrefsOverride(SharedPreferences prefs) {
-  return _prefsProvider.overrideWithValue(prefs);
-}
+Override themeModePrefsOverride(SharedPreferences prefs) =>
+    _prefsProvider.overrideWithValue(prefs);
