@@ -30,7 +30,9 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   @override
   void initState() {
     super.initState();
-    _init();
+    if (VoiceInputButton._supported) {
+      _init();
+    }
   }
 
   Future<void> _init() async {
