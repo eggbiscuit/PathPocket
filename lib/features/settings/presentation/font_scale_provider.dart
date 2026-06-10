@@ -17,6 +17,7 @@ class FontScaleNotifier extends Notifier<double> {
   }
 
   Future<void> setScale(double scale) async {
+    if (!fontScaleSteps.contains(scale)) return;
     state = scale;
     await _prefs.setDouble(_kFontScaleKey, scale);
   }
