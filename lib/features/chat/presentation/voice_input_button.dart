@@ -58,11 +58,12 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       onResult: (r) {
         if (!mounted) return;
         final text = r.recognizedWords;
-        setState(() => _partial = text);
         if (r.finalResult) {
           _commitText(text);
+          setState(() => _partial = '');
+        } else {
+          setState(() => _partial = text);
         }
-      },
       listenOptions: SpeechListenOptions(
         listenFor: const Duration(seconds: 30),
         pauseFor: const Duration(seconds: 3),
