@@ -31,7 +31,5 @@ final fontScaleProvider = NotifierProvider<FontScaleNotifier, double>(
   FontScaleNotifier.new,
 );
 
-// ignore: prefer_expression_function_bodies
-fontScalePrefsOverride(SharedPreferences prefs) {
-  return _fontPrefsProvider.overrideWithValue(prefs);
-}
+Override fontScalePrefsOverride(SharedPreferences prefs) =>
+    _fontPrefsProvider.overrideWithValue(prefs);
