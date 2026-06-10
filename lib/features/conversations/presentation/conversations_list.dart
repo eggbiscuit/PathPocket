@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../../auth/domain/user.dart';
 import '../../auth/presentation/auth_provider.dart';
+import '../../settings/presentation/settings_screen.dart';
 import '../data/conversation_repository.dart';
 import '../domain/conversation.dart';
 import 'conversations_provider.dart';
@@ -322,6 +323,14 @@ class _Footer extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          IconButton(
+            tooltip: '设置',
+            icon: const Icon(Icons.settings_outlined, size: 18),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
           ),
           IconButton(

@@ -9,6 +9,7 @@ import 'chat_provider.dart';
 import 'citation_drawer.dart';
 import 'message_bubble.dart';
 import 'smart_scroll_controller.dart';
+import 'voice_input_button.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.conversationId});
@@ -129,6 +130,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             i == state.messages.length - 1 &&
             msg.role == MessageRole.assistant;
 
+        // Show regenerate on error even if not the last message in list
+        // (edge case: new messages can't arrive after an error anyway).
+        final showRegenerate = isLastAssistant ||
+            (msg.role == MessageRole.assistant &&
+                msg.status == MessageStatus.error &&
+                !streaming);
+
         return MessageBubble(
           message: msg,
           conversationId: widget.conversationId,
@@ -137,7 +145,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   .read(chatProvider(widget.conversationId).notifier)
                   .stopGeneration()
               : null,
-          onRegenerate: isLastAssistant
+          onRegenerate: showRegenerate
               ? () => ref
                   .read(chatProvider(widget.conversationId).notifier)
                   .regenerate(msg.id)
@@ -239,6 +247,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     onPressed:
                         isLoading ? null : () => _showImagePicker(context),
                   ),
+                  VoiceInputButton(controller: _input),
                   Expanded(
                     child: TextField(
                       controller: _input,

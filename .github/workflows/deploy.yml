@@ -1,11 +1,11 @@
-name: CI — Analyze & Test
+name: CD — Build & Deploy Web
 
 on:
-  pull_request:
+  push:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: deploy-main
   cancel-in-progress: true
 
 env:
@@ -13,9 +13,11 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  analyze_and_test:
-    name: Analyze & Test
+  build_and_deploy_web:
+    name: Build & Deploy Web
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -35,15 +37,12 @@ jobs:
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Build web
+        run: flutter build web --release --base-href /PathPocket/
 
-      - name: Run tests
-        run: flutter test --coverage
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          files: coverage/lcov.info
-          fail_ci_if_error: false
-        continue-on-error: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/web
+          cname: ''

@@ -40,6 +40,22 @@ class OpenAIChatRepository implements ChatRepository {
   final Dio _dio;
   final SseParser _parser;
 
+  static const _maxRetries = 2;
+  static const _retryDelays = [
+    Duration(milliseconds: 800),
+    Duration(seconds: 2),
+  ];
+
+  static bool _isRetryable(DioException e) {
+    return e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        (e.response?.statusCode != null &&
+            (e.response!.statusCode == 429 ||
+                e.response!.statusCode! >= 500));
+  }
+
   @override
   Stream<ChatStreamEvent> streamChat(
     List<Message> messages, {
@@ -58,26 +74,35 @@ class OpenAIChatRepository implements ChatRepository {
     };
 
     Response<ResponseBody> response;
-    try {
-      response = await _dio.post<ResponseBody>(
-        config.apiEndpoint,
-        data: payload,
-        cancelToken: cancelToken,
-        options: Options(
-          responseType: ResponseType.stream,
-          headers: {
-            'Authorization': 'Bearer ${config.apiKey}',
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream',
-          },
-        ),
-      );
-    } on DioException catch (e) {
-      if (CancelToken.isCancel(e)) return;
-      throw ChatRepositoryException(
-        'Request failed: ${e.message ?? e.type.name}',
-        cause: e,
-      );
+    int attempt = 0;
+    while (true) {
+      try {
+        response = await _dio.post<ResponseBody>(
+          config.apiEndpoint,
+          data: payload,
+          cancelToken: cancelToken,
+          options: Options(
+            responseType: ResponseType.stream,
+            headers: {
+              'Authorization': 'Bearer ${config.apiKey}',
+              'Content-Type': 'application/json',
+              'Accept': 'text/event-stream',
+            },
+          ),
+        );
+        break; // success
+      } on DioException catch (e) {
+        if (CancelToken.isCancel(e)) return;
+        if (attempt < _maxRetries && _isRetryable(e)) {
+          await Future.delayed(_retryDelays[attempt]);
+          attempt++;
+          continue;
+        }
+        throw ChatRepositoryException(
+          '请求失败（已重试 $attempt 次）：${e.message ?? e.type.name}',
+          cause: e,
+        );
+      }
     }
 
     final stream = response.data?.stream;
@@ -85,12 +110,13 @@ class OpenAIChatRepository implements ChatRepository {
       throw const ChatRepositoryException('Empty response stream');
     }
 
+    // No retry inside the stream — partial content already delivered.
     try {
       yield* _parser.parse(stream);
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) return;
       throw ChatRepositoryException(
-        'Stream interrupted: ${e.message ?? e.type.name}',
+        '流传输中断：${e.message ?? e.type.name}',
         cause: e,
       );
     }
