@@ -41,5 +41,5 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 );
 
 /// Call this in ProviderScope.overrides to inject SharedPreferences.
-Override themeModePrefsOverride(SharedPreferences prefs) =>
+themeModePrefsOverride(SharedPreferences prefs) =>
     _prefsProvider.overrideWithValue(prefs);

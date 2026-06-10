@@ -31,5 +31,5 @@ final fontScaleProvider = NotifierProvider<FontScaleNotifier, double>(
   FontScaleNotifier.new,
 );
 
-Override fontScalePrefsOverride(SharedPreferences prefs) =>
+fontScalePrefsOverride(SharedPreferences prefs) =>
     _fontPrefsProvider.overrideWithValue(prefs);
