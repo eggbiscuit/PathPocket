@@ -106,11 +106,12 @@ class MessageBubble extends ConsumerWidget {
 
     final isStreaming = message.status == MessageStatus.streaming;
     final isInterrupted = message.wasInterrupted;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       padding: _padding,
       decoration: BoxDecoration(
-        color: AppColors.aiBubble,
+        color: isDark ? AppColors.darkAiBubble : AppColors.aiBubble,
         borderRadius: _radius,
         border: isInterrupted
             ? Border.all(color: AppColors.error.withValues(alpha: 0.3))
@@ -142,6 +143,7 @@ class MessageBubble extends ConsumerWidget {
             _MarkdownWithCitations(
               content: message.content,
               citations: message.citations,
+              isDark: isDark,
               onCitationTap: (tagContent) =>
                   _openCitation(ref, tagContent),
             ),
@@ -289,11 +291,13 @@ class _MarkdownWithCitations extends StatelessWidget {
   const _MarkdownWithCitations({
     required this.content,
     required this.citations,
+    required this.isDark,
     required this.onCitationTap,
   });
 
   final String content;
   final List<Citation> citations;
+  final bool isDark;
   final void Function(String index) onCitationTap;
 
   @override
@@ -303,13 +307,13 @@ class _MarkdownWithCitations extends StatelessWidget {
       selectable: true,
       extensionSet: md.ExtensionSet.gitHubFlavored,
       styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(
-          color: AppColors.aiBubbleText,
+        p: TextStyle(
+          color: isDark ? AppColors.darkAiBubbleText : AppColors.aiBubbleText,
           fontSize: 15,
           height: 1.5,
         ),
-        strong: const TextStyle(
-          color: AppColors.aiBubbleText,
+        strong: TextStyle(
+          color: isDark ? AppColors.darkAiBubbleText : AppColors.aiBubbleText,
           fontWeight: FontWeight.w700,
         ),
         code: const TextStyle(

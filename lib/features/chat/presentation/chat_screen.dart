@@ -214,9 +214,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           .read(chatProvider(widget.conversationId).notifier)
           .addPendingImage(img),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFEAEAEA))),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: Theme.of(context).dividerColor),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -260,7 +262,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       decoration: InputDecoration(
                         hintText: isLoading ? '等待回复中...' : '请输入你的问题',
                         filled: true,
-                        fillColor: const Color(0xFFF5F5F5),
+                        fillColor: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.darkInputFill
+                            : const Color(0xFFF5F5F5),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 12,
