@@ -28,5 +28,9 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>PathPocket 需要语音识别权限以支持语音输入问题。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PathPocket 需要麦克风权限以录制你的语音问题。</string>
 </dict>
 </plist>
