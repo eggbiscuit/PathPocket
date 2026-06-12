@@ -5,14 +5,17 @@ import 'package:speech_to_text/speech_to_text.dart';
 import '../../../core/theme.dart';
 
 /// Platforms where speech_to_text has a working native implementation.
+/// Web uses Chrome's built-in Web Speech API — supported by speech_to_text.
 bool get _speechSupported =>
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows);
+    kIsWeb ||
+    defaultTargetPlatform == TargetPlatform.iOS ||
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.macOS ||
+    defaultTargetPlatform == TargetPlatform.windows;
 
+/// Desktop / web platforms use click-to-toggle instead of press-and-hold.
 bool get _isDesktop =>
+    kIsWeb ||
     defaultTargetPlatform == TargetPlatform.macOS ||
     defaultTargetPlatform == TargetPlatform.windows ||
     defaultTargetPlatform == TargetPlatform.linux;
