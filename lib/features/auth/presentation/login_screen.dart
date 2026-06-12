@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme.dart';
 import 'auth_provider.dart';
@@ -33,16 +34,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authProvider.notifier).sendSmsCode(_phone.text.trim());
       _startCountdown();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('验证码已发送（mock：固定为 123456）'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('验证码已发送（mock：固定为 123456）',
+              style: GoogleFonts.dmSans()),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md)),
+        ));
       }
-    } catch (_) {
-      // error surfaced via state.errorMessage
-    }
+    } catch (_) {}
   }
 
   void _startCountdown() {
@@ -67,14 +67,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             .read(authProvider.notifier)
             .loginWithPassword(phone, _password.text);
       }
-    } catch (_) {
-      // surfaced via state.errorMessage / SnackBar below
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       final err = next.errorMessage;
@@ -83,79 +82,138 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(
             backgroundColor: AppColors.error,
-            content: Text(err),
+            content: Text(err, style: GoogleFonts.dmSans()),
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md)),
           ));
       }
     });
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.bgPageDark : AppColors.bgPage,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 380),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 32),
-                  Icon(
-                    Icons.medical_services,
-                    size: 56,
-                    color: AppColors.primary,
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.primaryContainerDark
+                            : AppColors.primaryContainer,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Icon(
+                        Icons.biotech_outlined,
+                        size: 32,
+                        color: isDark
+                            ? AppColors.primaryDark
+                            : AppColors.primary,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  const SizedBox(height: 20),
+                  Text(
                     'PathPocket',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: GoogleFonts.dmSerifDisplay(
                       fontSize: 28,
-                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '病理问答助手',
+                  const SizedBox(height: 6),
+                  Text(
+                    'HKUST SmartX Lab · 病理学 AI 助手',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.timestamp,
-                      fontSize: 14,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  _buildModeTabs(),
+                  const SizedBox(height: 36),
+                  SegmentedButton<_LoginMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: _LoginMode.sms,
+                        label: Text('短信验证码', style: GoogleFonts.dmSans()),
+                      ),
+                      ButtonSegment(
+                        value: _LoginMode.password,
+                        label: Text('密码登录', style: GoogleFonts.dmSans()),
+                      ),
+                    ],
+                    selected: {_mode},
+                    onSelectionChanged: (s) =>
+                        setState(() => _mode = s.first),
+                  ),
                   const SizedBox(height: 20),
-                  _buildPhoneField(),
+                  TextField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 11,
+                    style: GoogleFonts.dmSans(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: '手机号',
+                      labelStyle: GoogleFonts.dmSans(
+                          color: AppColors.textTertiary),
+                      counterText: '',
+                      prefixIcon: Icon(Icons.phone_outlined,
+                          size: 18,
+                          color: isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiary),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   if (_mode == _LoginMode.sms)
-                    _buildCodeField()
+                    _buildCodeField(isDark)
                   else
-                    _buildPasswordField(),
+                    _buildPasswordField(isDark),
                   const SizedBox(height: 20),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
+                  SizedBox(
+                    height: 46,
+                    child: FilledButton(
+                      onPressed: state.isLoading ? null : _submit,
+                      child: state.isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text('登录',
+                              style: GoogleFonts.dmSans(
+                                  fontWeight: FontWeight.w600, fontSize: 15)),
                     ),
-                    onPressed: state.isLoading ? null : _submit,
-                    child: state.isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(_mode == _LoginMode.sms ? '登录' : '登录'),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  const SizedBox(height: 20),
+                  Text(
                     '本产品由 AI 生成回答，仅供学术参考，不构成医疗诊断。',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.timestamp,
+                    style: GoogleFonts.dmSans(
                       fontSize: 11,
+                      height: 1.5,
+                      color: isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
                     ),
                   ),
                 ],
@@ -167,32 +225,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildModeTabs() {
-    return SegmentedButton<_LoginMode>(
-      segments: const [
-        ButtonSegment(value: _LoginMode.sms, label: Text('短信验证码')),
-        ButtonSegment(value: _LoginMode.password, label: Text('密码登录')),
-      ],
-      selected: {_mode},
-      onSelectionChanged: (s) => setState(() => _mode = s.first),
-    );
-  }
-
-  Widget _buildPhoneField() {
-    return TextField(
-      controller: _phone,
-      keyboardType: TextInputType.phone,
-      maxLength: 11,
-      decoration: const InputDecoration(
-        labelText: '手机号',
-        counterText: '',
-        prefixIcon: Icon(Icons.phone),
-        border: OutlineInputBorder(),
-      ),
-    );
-  }
-
-  Widget _buildCodeField() {
+  Widget _buildCodeField(bool isDark) {
     final canSend = _smsCountdown == 0 && _phone.text.trim().length == 11;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,36 +235,65 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             controller: _code,
             keyboardType: TextInputType.number,
             maxLength: 6,
-            decoration: const InputDecoration(
+            style: GoogleFonts.dmSans(
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimary,
+            ),
+            decoration: InputDecoration(
               labelText: '验证码',
+              labelStyle:
+                  GoogleFonts.dmSans(color: AppColors.textTertiary),
               counterText: '',
-              prefixIcon: Icon(Icons.sms),
-              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.sms_outlined,
+                  size: 18,
+                  color: isDark
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiary),
             ),
           ),
         ),
         const SizedBox(width: 8),
         SizedBox(
-          height: 56,
+          height: 50,
           child: OutlinedButton(
             onPressed: canSend ? _sendCode : null,
-            child: Text(
-              _smsCountdown == 0 ? '获取验证码' : '${_smsCountdown}s',
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: canSend
+                    ? (isDark ? AppColors.primaryDark : AppColors.primary)
+                    : (isDark
+                        ? AppColors.dividerDark
+                        : AppColors.divider),
+              ),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md)),
+              textStyle: GoogleFonts.dmSans(fontSize: 13),
             ),
+            child: Text(
+                _smsCountdown == 0 ? '获取验证码' : '${_smsCountdown}s'),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField(bool isDark) {
     return TextField(
       controller: _password,
       obscureText: true,
-      decoration: const InputDecoration(
+      style: GoogleFonts.dmSans(
+        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
         labelText: '密码',
-        prefixIcon: Icon(Icons.lock),
-        border: OutlineInputBorder(),
+        labelStyle:
+            GoogleFonts.dmSans(color: AppColors.textTertiary),
+        prefixIcon: Icon(Icons.lock_outline,
+            size: 18,
+            color: isDark
+                ? AppColors.textTertiaryDark
+                : AppColors.textTertiary),
       ),
     );
   }

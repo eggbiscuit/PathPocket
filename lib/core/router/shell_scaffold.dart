@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/conversations/presentation/conversations_list.dart';
@@ -23,57 +24,47 @@ class ShellScaffold extends ConsumerWidget {
   }
 }
 
+// ── Desktop Layout ────────────────────────────────────────────────────────────
+
 class _DesktopScaffold extends StatelessWidget {
   const _DesktopScaffold({required this.conversationId});
   final String? conversationId;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sidebarBg =
+        isDark ? AppColors.bgSidebarDark : AppColors.bgSidebar;
+
     return Scaffold(
       body: Row(
         children: [
-          SizedBox(
-            width: 260,
-            child: Column(
-              children: [
-                Container(
-                  height: 56,
-                  color: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.centerLeft,
-                  child: const Text(
-                    'PathPocket',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const Expanded(child: ConversationsList()),
-              ],
-            ),
+          // ── Sidebar ──────────────────────────────────────────────
+          Container(
+            width: 256,
+            color: sidebarBg,
+            child: const ConversationsList(),
           ),
-          const VerticalDivider(width: 1),
+          // Subtle divider
+          Container(
+            width: 1,
+            color: isDark ? AppColors.dividerDark : AppColors.divider,
+          ),
+          // ── Chat area ────────────────────────────────────────────
           Expanded(
-            child: Column(
-              children: [
-                _ChatAppBar(conversationId: conversationId),
-                Expanded(
-                  child: conversationId == null
-                      ? const _NoConversationPlaceholder()
-                      : CitationDrawerHost(
-                          child: ChatScreen(conversationId: conversationId!),
-                        ),
-                ),
-              ],
-            ),
+            child: conversationId == null
+                ? const _WelcomeScreen()
+                : CitationDrawerHost(
+                    child: ChatScreen(conversationId: conversationId!),
+                  ),
           ),
         ],
       ),
     );
   }
 }
+
+// ── Mobile Layout ─────────────────────────────────────────────────────────────
 
 class _MobileScaffold extends StatelessWidget {
   const _MobileScaffold({required this.conversationId});
@@ -82,17 +73,15 @@ class _MobileScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PathPocket'),
-        actions: const [_ClearButton()],
-      ),
+      // No AppBar — use inline header inside ChatScreen / WelcomeScreen
+      appBar: _MobileAppBar(),
       drawer: Drawer(
         child: ConversationsList(
           onSelect: () => Navigator.of(context).pop(),
         ),
       ),
       body: conversationId == null
-          ? const _NoConversationPlaceholder()
+          ? const _WelcomeScreen()
           : CitationDrawerHost(
               child: ChatScreen(conversationId: conversationId!),
             ),
@@ -100,87 +89,222 @@ class _MobileScaffold extends StatelessWidget {
   }
 }
 
-class _ChatAppBar extends ConsumerWidget {
-  const _ChatAppBar({required this.conversationId});
-  final String? conversationId;
+class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
+  @override
+  Size get preferredSize => const Size.fromHeight(52);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      height: 56,
-      color: AppColors.primary,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Text(
-              '病理问答',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+      height: preferredSize.height,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.bgPageDark : AppColors.bgPage,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.divider,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: Icon(
+                  Icons.menu,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+                  size: 22,
+                ),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
               ),
             ),
-          ),
-          const _ClearButton(),
-        ],
+            Text(
+              'PathPocket',
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 18,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ClearButton extends ConsumerWidget {
-  const _ClearButton();
+// ── Welcome / Empty State ─────────────────────────────────────────────────────
+
+class _WelcomeScreen extends ConsumerWidget {
+  const _WelcomeScreen();
+
+  static const _suggestions = [
+    (icon: '📋', title: '分析病理报告', subtitle: '上传报告，获取 AI 解读'),
+    (icon: '🔬', title: '鉴别诊断', subtitle: '描述病理特征，辅助鉴别'),
+    (icon: '📚', title: '文献引用查询', subtitle: '查找相关病理学文献'),
+    (icon: '🖼️', title: '上传病理切片', subtitle: '图像分析与特征提取'),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
-      tooltip: '清空对话',
-      icon: const Icon(Icons.delete_outline, color: Colors.white),
-      onPressed: () async {
-        final conversationId = ref.read(selectedConversationProvider);
-        if (conversationId == null) return;
-        final ok = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('清空对话'),
-            content: const Text('确定要清空当前对话吗？'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('清空'),
-              ),
-            ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final width = MediaQuery.sizeOf(context).width;
+    final isDesktop = Breakpoints.of(width) == Breakpoint.desktop;
+
+    return Container(
+      color: isDark ? AppColors.bgPageDark : AppColors.bgPage,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo mark
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.primaryContainerDark
+                        : AppColors.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Icon(
+                    Icons.biotech_outlined,
+                    size: 28,
+                    color: isDark ? AppColors.primaryDark : AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  '你好，我是 PathPocket',
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: isDesktop ? 30 : 24,
+                    fontWeight: FontWeight.w400,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'HKUST SmartX Lab · 病理学 AI 助手',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 14,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 36),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.4,
+                  children: _suggestions
+                      .map((s) => _SuggestionCard(
+                            icon: s.icon,
+                            title: s.title,
+                            subtitle: s.subtitle,
+                            isDark: isDark,
+                          ))
+                      .toList(),
+                ),
+              ],
+            ),
           ),
-        );
-        if (ok != true || !context.mounted) return;
-        // Delete and re-create is a safe clear; simpler than partial purge.
-        // TODO Phase 2: expose clearMessages on chatProvider instead.
-      },
+        ),
+      ),
     );
   }
 }
 
-class _NoConversationPlaceholder extends StatelessWidget {
-  const _NoConversationPlaceholder();
+class _SuggestionCard extends StatefulWidget {
+  const _SuggestionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+  });
+  final String icon;
+  final String title;
+  final String subtitle;
+  final bool isDark;
+
+  @override
+  State<_SuggestionCard> createState() => _SuggestionCardState();
+}
+
+class _SuggestionCardState extends State<_SuggestionCard> {
+  bool _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.medical_services, size: 56, color: AppColors.primary),
-          SizedBox(height: 16),
-          Text(
-            '选择或新建一个对话开始咨询',
-            style: TextStyle(color: AppColors.timestamp),
-          ),
-        ],
+    final borderColor = _hovered
+        ? (widget.isDark ? AppColors.primaryDark : AppColors.primary)
+        : (widget.isDark ? AppColors.dividerDark : AppColors.divider);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: widget.isDark ? AppColors.bgSurfaceDark : AppColors.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: borderColor),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Text(widget.icon, style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: widget.isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              widget.subtitle,
+              style: GoogleFonts.dmSans(
+                fontSize: 11,
+                color: widget.isDark
+                    ? AppColors.textTertiaryDark
+                    : AppColors.textTertiary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
