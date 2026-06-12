@@ -52,7 +52,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('PathPocket'), findsWidgets);
-    expect(find.text('病理问答助手'), findsOneWidget);
-    expect(find.byIcon(Icons.phone), findsOneWidget);
+    expect(find.text('HKUST SmartX Lab · 病理学 AI 助手'), findsOneWidget);
+    expect(find.byIcon(Icons.phone_outlined), findsOneWidget);
   });
 }
