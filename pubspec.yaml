@@ -74,6 +74,9 @@ dependencies:
   # Voice input — Phase 3 (iOS / Android only)
   speech_to_text: ^7.0.0
 
+  # Typography — DM Sans + DM Serif Display
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

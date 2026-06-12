@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme.dart';
 import '../../auth/domain/user.dart';
@@ -12,47 +13,51 @@ import 'conversations_provider.dart';
 class ConversationsList extends ConsumerWidget {
   const ConversationsList({super.key, this.onSelect});
 
-  /// Optional callback fired after a list item is tapped — useful on mobile
-  /// to close the drawer.
   final VoidCallback? onSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final conversationsAsync = ref.watch(conversationsStreamProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Header(
+        _SidebarHeader(
           onNewChat: user == null
               ? null
               : () async {
                   await _createConversation(ref, user.id);
                   onSelect?.call();
                 },
+          isDark: isDark,
         ),
-        const Divider(height: 1),
         Expanded(
           child: conversationsAsync.when(
             data: (items) {
-              if (items.isEmpty) return const _Empty();
-              return _GroupedList(items: items, onSelect: onSelect);
+              if (items.isEmpty) return _Empty(isDark: isDark);
+              return _GroupedList(items: items, onSelect: onSelect, isDark: isDark);
             },
-            loading: () =>
-                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            error: (e, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  '加载会话失败：$e',
-                  style: const TextStyle(color: AppColors.error),
+            loading: () => Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: isDark ? AppColors.primaryDark : AppColors.primary,
+              ),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '加载失败：$e',
+                style: GoogleFonts.dmSans(
+                  fontSize: 12,
+                  color: AppColors.error,
                 ),
               ),
             ),
           ),
         ),
-        if (user != null) _Footer(user: user),
+        if (user != null) _Footer(user: user, isDark: isDark),
       ],
     );
   }
@@ -71,29 +76,63 @@ class ConversationsList extends ConsumerWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.onNewChat});
+// ── Sidebar header with logo + new chat button ────────────────────────────────
+
+class _SidebarHeader extends StatelessWidget {
+  const _SidebarHeader({required this.onNewChat, required this.isDark});
   final VoidCallback? onNewChat;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(
+          // Logo
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 14),
             child: Text(
-              '会话历史',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              'PathPocket',
+              style: GoogleFonts.dmSerifDisplay(
+                fontSize: 17,
+                color: isDark ? AppColors.primaryDark : AppColors.primary,
               ),
             ),
           ),
-          IconButton(
-            tooltip: '新建对话',
-            onPressed: onNewChat,
-            icon: const Icon(Icons.add),
+          // New chat button
+          SizedBox(
+            width: double.infinity,
+            height: 36,
+            child: TextButton.icon(
+              onPressed: onNewChat,
+              icon: Icon(
+                Icons.add,
+                size: 16,
+                color: isDark ? AppColors.primaryDark : AppColors.primary,
+              ),
+              label: Text(
+                '新建对话',
+                style: GoogleFonts.dmSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.primaryDark : AppColors.primary,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: isDark
+                    ? AppColors.primaryContainerDark
+                    : AppColors.primaryContainer,
+                foregroundColor:
+                    isDark ? AppColors.primaryDark : AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.centerLeft,
+              ),
+            ),
           ),
         ],
       ),
@@ -101,28 +140,42 @@ class _Header extends StatelessWidget {
   }
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
+
 class _Empty extends StatelessWidget {
-  const _Empty();
+  const _Empty({required this.isDark});
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Text(
-          '还没有对话\n点击右上角 + 开始第一次咨询',
+          '还没有对话\n点击"新建对话"开始',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.timestamp, fontSize: 13),
+          style: GoogleFonts.dmSans(
+            fontSize: 12,
+            height: 1.6,
+            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+          ),
         ),
       ),
     );
   }
 }
 
+// ── Grouped list ──────────────────────────────────────────────────────────────
+
 class _GroupedList extends ConsumerWidget {
-  const _GroupedList({required this.items, required this.onSelect});
+  const _GroupedList({
+    required this.items,
+    required this.onSelect,
+    required this.isDark,
+  });
   final List<Conversation> items;
   final VoidCallback? onSelect;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,24 +184,20 @@ class _GroupedList extends ConsumerWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      itemCount: groups.fold<int>(
-        0,
-        (sum, g) => sum + 1 + g.items.length,
-      ),
+      itemCount: groups.fold<int>(0, (sum, g) => sum + 1 + g.items.length),
       itemBuilder: (context, idx) {
         var i = idx;
         for (final g in groups) {
-          if (i == 0) return _SectionHeader(label: g.label);
+          if (i == 0) return _SectionLabel(label: g.label, isDark: isDark);
           i -= 1;
           if (i < g.items.length) {
             final c = g.items[i];
             return _ConversationTile(
               conversation: c,
               selected: c.id == selected,
+              isDark: isDark,
               onTap: () {
-                ref
-                    .read(selectedConversationProvider.notifier)
-                    .select(c.id);
+                ref.read(selectedConversationProvider.notifier).select(c.id);
                 onSelect?.call();
               },
             );
@@ -161,74 +210,121 @@ class _GroupedList extends ConsumerWidget {
   }
 }
 
-class _ConversationTile extends ConsumerWidget {
+// ── Conversation tile ─────────────────────────────────────────────────────────
+
+class _ConversationTile extends ConsumerStatefulWidget {
   const _ConversationTile({
     required this.conversation,
     required this.selected,
+    required this.isDark,
     required this.onTap,
   });
-
   final Conversation conversation;
   final bool selected;
+  final bool isDark;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Material(
-      color: selected
-          ? (Theme.of(context).brightness == Brightness.dark
-              ? AppColors.darkAiBubble
-              : AppColors.aiBubble)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              const Icon(Icons.chat_bubble_outline,
-                  size: 18, color: AppColors.timestamp),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  conversation.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+  ConsumerState<_ConversationTile> createState() => _ConversationTileState();
+}
+
+class _ConversationTileState extends ConsumerState<_ConversationTile> {
+  bool _hovered = false;
+
+  Color get _bg {
+    if (widget.selected) {
+      return widget.isDark
+          ? AppColors.bgSidebarActiveDark
+          : AppColors.bgSidebarActive;
+    }
+    if (_hovered) {
+      return widget.isDark
+          ? AppColors.bgSidebarHoverDark
+          : AppColors.bgSidebarHover;
+    }
+    return Colors.transparent;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+        decoration: BoxDecoration(
+          color: _bg,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.conversation.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      fontWeight: widget.selected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: widget.isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
                   ),
                 ),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, size: 18),
-                tooltip: '更多',
-                onSelected: (v) => _handleAction(context, ref, v),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'rename', child: Text('重命名')),
-                  PopupMenuItem(value: 'delete', child: Text('删除')),
-                ],
-              ),
-            ],
+                if (_hovered || widget.selected)
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_horiz,
+                      size: 16,
+                      color: widget.isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                    ),
+                    tooltip: '更多',
+                    onSelected: (v) => _handleAction(context, v),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'rename',
+                        child: Text('重命名',
+                            style: GoogleFonts.dmSans(fontSize: 13)),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('删除',
+                            style: GoogleFonts.dmSans(
+                                fontSize: 13, color: AppColors.error)),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Future<void> _handleAction(
-      BuildContext context, WidgetRef ref, String action) async {
+  Future<void> _handleAction(BuildContext context, String action) async {
     final repo = ref.read(conversationRepositoryProvider);
     if (action == 'rename') {
-      final newTitle = await _promptRename(context, conversation.title);
+      final newTitle = await _promptRename(context, widget.conversation.title);
       if (newTitle != null && newTitle.isNotEmpty) {
-        await repo.rename(conversation.id, newTitle);
+        await repo.rename(widget.conversation.id, newTitle);
       }
     } else if (action == 'delete') {
       final ok = await _confirmDelete(context);
       if (ok == true) {
-        await repo.remove(conversation.id);
-        if (ref.read(selectedConversationProvider) == conversation.id) {
+        await repo.remove(widget.conversation.id);
+        if (ref.read(selectedConversationProvider) == widget.conversation.id) {
           ref.read(selectedConversationProvider.notifier).select(null);
         }
       }
@@ -240,20 +336,21 @@ class _ConversationTile extends ConsumerWidget {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('重命名对话'),
+        title: Text('重命名对话', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
+          style: GoogleFonts.dmSans(),
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
+            child: Text('取消', style: GoogleFonts.dmSans()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('保存'),
+            child: Text('保存', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -264,17 +361,19 @@ class _ConversationTile extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除对话'),
-        content: const Text('该对话及全部消息将被删除，且无法恢复。'),
+        title: Text('删除对话', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
+        content: Text('该对话及全部消息将被永久删除。',
+            style: GoogleFonts.dmSans(fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
+            child: Text('取消', style: GoogleFonts.dmSans()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('删除',
-                style: TextStyle(color: AppColors.error)),
+            child: Text('删除',
+                style: GoogleFonts.dmSans(
+                    color: AppColors.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -282,58 +381,83 @@ class _ConversationTile extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
+// ── Section label ─────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.label, required this.isDark});
   final String label;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
       child: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.timestamp,
-          fontSize: 11,
-          letterSpacing: 0.5,
+        label.toUpperCase(),
+        style: GoogleFonts.dmSans(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
+          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
         ),
       ),
     );
   }
 }
 
+// ── Footer ────────────────────────────────────────────────────────────────────
+
 class _Footer extends ConsumerWidget {
-  const _Footer({required this.user});
+  const _Footer({required this.user, required this.isDark});
   final User user;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Theme.of(context).dividerColor),
+          top: BorderSide(
+            color: isDark ? AppColors.dividerDark : AppColors.divider,
+          ),
         ),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: AppColors.primary,
-            child: const Icon(Icons.person, size: 16, color: Colors.white),
+            backgroundColor: isDark
+                ? AppColors.primaryContainerDark
+                : AppColors.primaryContainer,
+            child: Icon(
+              Icons.person,
+              size: 15,
+              color: isDark ? AppColors.primaryDark : AppColors.primary,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               user.displayName ?? user.phone,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimary,
+              ),
             ),
           ),
           IconButton(
             tooltip: '设置',
-            icon: const Icon(Icons.settings_outlined, size: 18),
+            icon: Icon(
+              Icons.settings_outlined,
+              size: 17,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -341,7 +465,12 @@ class _Footer extends ConsumerWidget {
           ),
           IconButton(
             tooltip: '退出登录',
-            icon: const Icon(Icons.logout, size: 18),
+            icon: Icon(
+              Icons.logout,
+              size: 17,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
             onPressed: () => ref.read(authProvider.notifier).logout(),
           ),
         ],
@@ -349,6 +478,8 @@ class _Footer extends ConsumerWidget {
     );
   }
 }
+
+// ── Date grouping helpers ─────────────────────────────────────────────────────
 
 class _Group {
   _Group(this.label, this.items);
@@ -358,31 +489,31 @@ class _Group {
 
 List<_Group> _groupByDate(List<Conversation> items) {
   final now = DateTime.now();
-  final startOfToday = DateTime(now.year, now.month, now.day);
-  final startOfYesterday = startOfToday.subtract(const Duration(days: 1));
-  final startOfPast7 = startOfToday.subtract(const Duration(days: 7));
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = today.subtract(const Duration(days: 1));
+  final past7 = today.subtract(const Duration(days: 7));
 
-  final today = <Conversation>[];
-  final yesterday = <Conversation>[];
-  final past7 = <Conversation>[];
-  final earlier = <Conversation>[];
+  final todayList = <Conversation>[];
+  final yesterdayList = <Conversation>[];
+  final past7List = <Conversation>[];
+  final earlierList = <Conversation>[];
 
   for (final c in items) {
-    if (!c.updatedAt.isBefore(startOfToday)) {
-      today.add(c);
-    } else if (!c.updatedAt.isBefore(startOfYesterday)) {
-      yesterday.add(c);
-    } else if (!c.updatedAt.isBefore(startOfPast7)) {
-      past7.add(c);
+    if (!c.updatedAt.isBefore(today)) {
+      todayList.add(c);
+    } else if (!c.updatedAt.isBefore(yesterday)) {
+      yesterdayList.add(c);
+    } else if (!c.updatedAt.isBefore(past7)) {
+      past7List.add(c);
     } else {
-      earlier.add(c);
+      earlierList.add(c);
     }
   }
 
   return [
-    if (today.isNotEmpty) _Group('今天', today),
-    if (yesterday.isNotEmpty) _Group('昨天', yesterday),
-    if (past7.isNotEmpty) _Group('过去 7 天', past7),
-    if (earlier.isNotEmpty) _Group('更早', earlier),
+    if (todayList.isNotEmpty) _Group('今天', todayList),
+    if (yesterdayList.isNotEmpty) _Group('昨天', yesterdayList),
+    if (past7List.isNotEmpty) _Group('过去 7 天', past7List),
+    if (earlierList.isNotEmpty) _Group('更早', earlierList),
   ];
 }
