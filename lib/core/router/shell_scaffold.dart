@@ -126,7 +126,7 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
               'PathPocket',
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 18,
-                color: AppColors.primary,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
           ],
