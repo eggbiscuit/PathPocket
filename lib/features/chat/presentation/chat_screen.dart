@@ -266,7 +266,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -279,9 +279,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             ? null
                             : () => _showImagePicker(context),
                       ),
-                      // Voice
-                      VoiceInputButton(controller: _input),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       // Text field
                       Expanded(
                         child: TextField(
@@ -343,7 +341,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      // Voice — right of input, left of send
+                      VoiceInputButton(controller: _input),
+                      const SizedBox(width: 6),
                       _SendButton(
                         isLoading: isLoading,
                         hasText: hasText || pendingImages.isNotEmpty,
