@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/conversations/presentation/conversations_list.dart';
 import '../../features/conversations/presentation/conversations_provider.dart';
+import '../../features/conversations/data/conversation_repository.dart';
+import '../../features/conversations/domain/conversation.dart';
+import '../../features/auth/presentation/auth_provider.dart';
 import '../breakpoints.dart';
 import '../theme.dart';
 
@@ -24,38 +27,54 @@ class ShellScaffold extends ConsumerWidget {
   }
 }
 
-// ── Desktop Layout ────────────────────────────────────────────────────────────
+// ── Desktop Layout — resizable sidebar ───────────────────────────────────────
 
-class _DesktopScaffold extends StatelessWidget {
+class _DesktopScaffold extends StatefulWidget {
   const _DesktopScaffold({required this.conversationId});
   final String? conversationId;
 
   @override
+  State<_DesktopScaffold> createState() => _DesktopScaffoldState();
+}
+
+class _DesktopScaffoldState extends State<_DesktopScaffold> {
+  double _sidebarWidth = 256;
+  static const double _minWidth = 160;
+  static const double _maxWidth = 400;
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sidebarBg =
-        isDark ? AppColors.bgSidebarDark : AppColors.bgSidebar;
 
     return Scaffold(
       body: Row(
         children: [
           // ── Sidebar ──────────────────────────────────────────────
-          Container(
-            width: 256,
-            color: sidebarBg,
-            child: const ConversationsList(),
+          SizedBox(
+            width: _sidebarWidth,
+            child: Container(
+              color: isDark ? AppColors.bgSidebarDark : AppColors.bgSidebar,
+              child: const ConversationsList(),
+            ),
           ),
-          // Subtle divider
-          Container(
-            width: 1,
-            color: isDark ? AppColors.dividerDark : AppColors.divider,
+
+          // ── Resize handle ─────────────────────────────────────────
+          _ResizeHandle(
+            isDark: isDark,
+            onDrag: (dx) {
+              setState(() {
+                _sidebarWidth =
+                    (_sidebarWidth + dx).clamp(_minWidth, _maxWidth);
+              });
+            },
           ),
+
           // ── Chat area ────────────────────────────────────────────
           Expanded(
-            child: conversationId == null
+            child: widget.conversationId == null
                 ? const _WelcomeScreen()
                 : CitationDrawerHost(
-                    child: ChatScreen(conversationId: conversationId!),
+                    child: ChatScreen(conversationId: widget.conversationId!),
                   ),
           ),
         ],
@@ -64,17 +83,75 @@ class _DesktopScaffold extends StatelessWidget {
   }
 }
 
+class _ResizeHandle extends StatefulWidget {
+  const _ResizeHandle({required this.isDark, required this.onDrag});
+  final bool isDark;
+  final void Function(double dx) onDrag;
+
+  @override
+  State<_ResizeHandle> createState() => _ResizeHandleState();
+}
+
+class _ResizeHandleState extends State<_ResizeHandle> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: GestureDetector(
+        onHorizontalDragUpdate: (d) => widget.onDrag(d.delta.dx),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 5,
+          color: Colors.transparent,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: _hovering ? 3 : 1,
+              color: _hovering
+                  ? (widget.isDark
+                      ? AppColors.primaryDark
+                      : AppColors.primary)
+                  : (widget.isDark
+                      ? AppColors.dividerDark
+                      : AppColors.divider),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Mobile Layout ─────────────────────────────────────────────────────────────
 
-class _MobileScaffold extends StatelessWidget {
+class _MobileScaffold extends ConsumerWidget {
   const _MobileScaffold({required this.conversationId});
   final String? conversationId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      // No AppBar — use inline header inside ChatScreen / WelcomeScreen
-      appBar: _MobileAppBar(),
+      appBar: _MobileAppBar(
+        conversationId: conversationId,
+        onNewChat: () async {
+          final user = ref.read(currentUserProvider);
+          if (user == null) return;
+          final now = DateTime.now();
+          final conv = Conversation(
+            id: generateConversationId(),
+            userId: user.id,
+            title: '新对话',
+            createdAt: now,
+            updatedAt: now,
+          );
+          await ref.read(conversationRepositoryProvider).create(conv);
+          ref.read(selectedConversationProvider.notifier).select(conv.id);
+        },
+      ),
       drawer: Drawer(
         child: ConversationsList(
           onSelect: () => Navigator.of(context).pop(),
@@ -90,12 +167,19 @@ class _MobileScaffold extends StatelessWidget {
 }
 
 class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _MobileAppBar({required this.conversationId, required this.onNewChat});
+  final String? conversationId;
+  final VoidCallback onNewChat;
+
   @override
   Size get preferredSize => const Size.fromHeight(52);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
+
     return Container(
       height: preferredSize.height,
       decoration: BoxDecoration(
@@ -110,24 +194,31 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
         bottom: false,
         child: Row(
           children: [
+            // Hamburger
             Builder(
               builder: (ctx) => IconButton(
-                icon: Icon(
-                  Icons.menu,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondary,
-                  size: 22,
-                ),
+                icon: Icon(Icons.menu, color: textSecondary, size: 22),
                 onPressed: () => Scaffold.of(ctx).openDrawer(),
+                tooltip: '会话列表',
               ),
             ),
-            Text(
-              'PathPocket',
-              style: GoogleFonts.dmSerifDisplay(
-                fontSize: 18,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            // Title
+            Expanded(
+              child: Text(
+                'PathPocket',
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 18,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+                ),
               ),
+            ),
+            // New chat quick button
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: textSecondary, size: 20),
+              onPressed: onNewChat,
+              tooltip: '新建对话',
             ),
           ],
         ),
@@ -138,7 +229,7 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ── Welcome / Empty State ─────────────────────────────────────────────────────
 
-class _WelcomeScreen extends ConsumerWidget {
+class _WelcomeScreen extends StatelessWidget {
   const _WelcomeScreen();
 
   static const _suggestions = [
@@ -149,10 +240,11 @@ class _WelcomeScreen extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = Breakpoints.of(width) == Breakpoint.desktop;
+    final isMobile = Breakpoints.of(width) == Breakpoint.mobile;
 
     return Container(
       color: isDark ? AppColors.bgPageDark : AppColors.bgPage,
@@ -160,14 +252,13 @@ class _WelcomeScreen extends ConsumerWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo mark
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: isMobile ? 48 : 56,
+                  height: isMobile ? 48 : 56,
                   decoration: BoxDecoration(
                     color: isDark
                         ? AppColors.primaryContainerDark
@@ -176,15 +267,15 @@ class _WelcomeScreen extends ConsumerWidget {
                   ),
                   child: Icon(
                     Icons.biotech_outlined,
-                    size: 28,
+                    size: isMobile ? 24 : 28,
                     color: isDark ? AppColors.primaryDark : AppColors.primary,
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isMobile ? 14 : 20),
                 Text(
                   '你好，我是 PathPocket',
                   style: GoogleFonts.dmSerifDisplay(
-                    fontSize: isDesktop ? 30 : 24,
+                    fontSize: isDesktop ? 30 : (isMobile ? 22 : 24),
                     fontWeight: FontWeight.w400,
                     color: isDark
                         ? AppColors.textPrimaryDark
@@ -193,34 +284,51 @@ class _WelcomeScreen extends ConsumerWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   'HKUST SmartX Lab · 病理学 AI 助手',
                   style: GoogleFonts.dmSans(
-                    fontSize: 14,
+                    fontSize: isMobile ? 13 : 14,
                     color: isDark
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 36),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 2.4,
-                  children: _suggestions
-                      .map((s) => _SuggestionCard(
-                            icon: s.icon,
-                            title: s.title,
-                            subtitle: s.subtitle,
-                            isDark: isDark,
-                          ))
-                      .toList(),
-                ),
+                SizedBox(height: isMobile ? 24 : 36),
+                // Mobile: single column; tablet/desktop: 2 columns
+                isMobile
+                    ? Column(
+                        children: _suggestions
+                            .map((s) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _SuggestionCard(
+                                    icon: s.icon,
+                                    title: s.title,
+                                    subtitle: s.subtitle,
+                                    isDark: isDark,
+                                    mobile: true,
+                                  ),
+                                ))
+                            .toList(),
+                      )
+                    : GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.4,
+                        children: _suggestions
+                            .map((s) => _SuggestionCard(
+                                  icon: s.icon,
+                                  title: s.title,
+                                  subtitle: s.subtitle,
+                                  isDark: isDark,
+                                  mobile: false,
+                                ))
+                            .toList(),
+                      ),
               ],
             ),
           ),
@@ -236,11 +344,13 @@ class _SuggestionCard extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.isDark,
+    required this.mobile,
   });
   final String icon;
   final String title;
   final String subtitle;
   final bool isDark;
+  final bool mobile;
 
   @override
   State<_SuggestionCard> createState() => _SuggestionCardState();
@@ -266,17 +376,21 @@ class _SuggestionCardState extends State<_SuggestionCard> {
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: borderColor),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        padding: EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: widget.mobile ? 14 : 12,
+        ),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Text(widget.icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
+            Text(widget.icon,
+                style: TextStyle(fontSize: widget.mobile ? 20 : 16)),
+            SizedBox(width: widget.mobile ? 12 : 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
                     widget.title,
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
@@ -285,24 +399,28 @@ class _SuggestionCardState extends State<_SuggestionCard> {
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimary,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.subtitle,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 11,
+                      color: widget.isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              widget.subtitle,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
+            if (widget.mobile)
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 12,
                 color: widget.isDark
                     ? AppColors.textTertiaryDark
                     : AppColors.textTertiary,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
           ],
         ),
       ),

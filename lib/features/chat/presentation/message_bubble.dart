@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../../../core/breakpoints.dart';
 import '../../../core/theme.dart';
 import '../domain/message.dart';
 import '../../image_input/presentation/image_viewer_screen.dart';
@@ -28,14 +29,17 @@ class MessageBubble extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isUser = message.role == MessageRole.user;
+    final width = MediaQuery.sizeOf(context).width;
+    final isMobile = Breakpoints.of(width) == Breakpoint.mobile;
+
     return AnimatedOpacity(
       opacity: 1,
       duration: const Duration(milliseconds: 180),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          isUser ? 48 : 16,
+          isUser ? (isMobile ? 40 : 64) : (isMobile ? 12 : 16),
           4,
-          isUser ? 16 : 48,
+          isUser ? (isMobile ? 12 : 16) : (isMobile ? 12 : 64),
           4,
         ),
         child: Column(
