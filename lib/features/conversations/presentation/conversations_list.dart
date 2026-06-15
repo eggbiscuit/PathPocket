@@ -97,7 +97,7 @@ class _SidebarHeader extends StatelessWidget {
               'PathPocket',
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 17,
-                color: isDark ? AppColors.primaryDark : AppColors.primary,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
           ),

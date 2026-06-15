@@ -7,10 +7,10 @@ class AppColors {
   AppColors._();
 
   // Primary brand
-  static const Color primary = Color(0xFF016469);
-  static const Color primaryDark = Color(0xFF26A69A);
-  static const Color primaryContainer = Color(0xFFE4EEEE);
-  static const Color primaryContainerDark = Color(0xFF0D3535);
+  static const Color primary = Color(0xFF00A1FF);
+  static const Color primaryDark = Color(0xFF40B8FF);
+  static const Color primaryContainer = Color(0xFFE0F4FF);
+  static const Color primaryContainerDark = Color(0xFF003D5C);
 
   // Accent — warm amber, scientific instrument feel
   static const Color accent = Color(0xFF8B6914);
@@ -45,7 +45,7 @@ class AppColors {
   static const Color textTertiaryDark = Color(0xFF605E5C);
 
   // User bubble
-  static const Color userBubble = Color(0xFF016469);
+  static const Color userBubble = Color(0xFF00A1FF);
   static const Color userBubbleText = Color(0xFFFFFFFF);
 
   // Utility
