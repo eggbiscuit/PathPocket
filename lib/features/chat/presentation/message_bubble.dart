@@ -42,8 +42,6 @@ class MessageBubble extends ConsumerWidget {
           crossAxisAlignment:
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isUser) _buildBotLabel(context),
-            const SizedBox(height: 4),
             isUser
                 ? _UserBubble(message: message)
                 : _AiBubble(
@@ -58,38 +56,6 @@ class MessageBubble extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildBotLabel(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      children: [
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            color: isDark
-                ? AppColors.primaryContainerDark
-                : AppColors.primaryContainer,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            Icons.biotech_outlined,
-            size: 13,
-            color: isDark ? AppColors.primaryDark : AppColors.primary,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          'PathPocket',
-          style: GoogleFonts.dmSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppColors.primaryDark : AppColors.primary,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -147,84 +113,56 @@ class _AiBubble extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isStreaming = message.status == MessageStatus.streaming;
     final isInterrupted = message.wasInterrupted;
-    final borderColor =
-        isDark ? AppColors.aiBubbleBorderDark : AppColors.aiBubbleBorder;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.bgSurfaceDark : AppColors.bgSurface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(AppRadius.bubble),
-          bottomLeft: Radius.circular(AppRadius.bubble),
-          bottomRight: Radius.circular(AppRadius.bubble),
-        ),
-        border: Border(
-          left: BorderSide(color: borderColor, width: 3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? const Color(0x28000000)
-                : const Color(0x0C000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image attachments
-          if (message.images.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-              child: _ImageRow(
-                images: message.images,
-                onTap: (img) => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ImageViewerScreen.fromUri(uri: img.uri),
-                  ),
-                ),
-              ),
-            ),
-          // Content
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Image attachments
+        if (message.images.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: message.content.isEmpty && isStreaming
-                ? _StreamingIndicator(isDark: isDark)
-                : _MarkdownContent(
-                    content: message.content,
-                    citations: message.citations,
-                    isDark: isDark,
-                    isStreaming: isStreaming,
-                    onCitationTap: (tag) => _openCitation(ref, tag),
-                  ),
-          ),
-          // Error / stopped indicator
-          if (isInterrupted)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Text(
-                message.status == MessageStatus.stopped ? '已停止生成' : '生成失败',
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  color: AppColors.error,
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _ImageRow(
+              images: message.images,
+              onTap: (img) => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ImageViewerScreen.fromUri(uri: img.uri),
                 ),
               ),
             ),
-          // Action row
-          if (!isStreaming)
-            _ActionRow(
-              message: message,
-              conversationId: conversationId,
-              ref: ref,
-              onRegenerate: onRegenerate,
-              isDark: isDark,
+          ),
+        // Content
+        message.content.isEmpty && isStreaming
+            ? _StreamingIndicator(isDark: isDark)
+            : _MarkdownContent(
+                content: message.content,
+                citations: message.citations,
+                isDark: isDark,
+                isStreaming: isStreaming,
+                onCitationTap: (tag) => _openCitation(ref, tag),
+              ),
+        // Error / stopped indicator
+        if (isInterrupted)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              message.status == MessageStatus.stopped ? '已停止生成' : '生成失败',
+              style: GoogleFonts.dmSans(
+                fontSize: 11,
+                color: AppColors.error,
+              ),
             ),
-        ],
-      ),
+          ),
+        // Action row
+        if (!isStreaming)
+          _ActionRow(
+            message: message,
+            conversationId: conversationId,
+            ref: ref,
+            onRegenerate: onRegenerate,
+            isDark: isDark,
+          ),
+      ],
     );
   }
 
@@ -459,7 +397,7 @@ class _ActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+      padding: const EdgeInsets.only(top: 6),
       child: Row(
         children: [
           _Btn(
