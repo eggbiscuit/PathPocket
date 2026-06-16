@@ -77,7 +77,7 @@ lib/
 ├── app.dart                      # MaterialApp.router + 主题
 ├── core/
 │   ├── config.dart               # API endpoint / key（gitignored，见 config.example.dart）
-│   ├── theme.dart                # AppColors + buildAppTheme()
+│   ├── theme.dart                # AppColors + AppPalette(ThemeExtension) + AppTextStyles + buildAppTheme()
 │   ├── breakpoints.dart          # 响应式断点（600 / 1024）
 │   ├── network/sse_parser.dart   # SSE 事件解析（TokenEvent / CitationEvent / DoneEvent）
 │   ├── storage/
@@ -97,10 +97,12 @@ lib/
         ├── domain/message.dart         # Message / Citation / ImageAttachment / Feedback
         └── presentation/
             ├── chat_provider.dart      # ChatNotifier.family（stop/regenerate/Drift 持久化）
-            ├── chat_screen.dart        # 主聊天界面 + CitationDrawerHost
-            ├── message_bubble.dart     # 气泡 + 引用点击 + 操作按钮
+            ├── chat_screen.dart        # 主聊天界面（消息列表 + 思考条 + 跳转 FAB）
+            ├── chat_input_bar.dart     # 底部输入栏（文本/图片/语音/发送，自管 controller）
+            ├── message_bubble.dart     # 气泡布局骨架（用户/AI 气泡 + 时间戳 + 图片行）
+            ├── message_content.dart    # AI 内容渲染（Markdown + 流式指示器 + 操作按钮行）
             ├── voice_input_button.dart # 按住说话（iOS/Android）
-            ├── citation_drawer.dart    # 引用抽屉 state + UI
+            ├── citation_drawer.dart    # 引用抽屉 state + UI（CitationDrawerHost）
             └── smart_scroll_controller.dart
 ```
 
