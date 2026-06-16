@@ -1,11 +1,13 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme.dart';
 import '../domain/message.dart';
+import '../../image_input/data/image_input_service.dart';
 import '../../image_input/presentation/image_picker_bar.dart';
 import '../../image_input/presentation/image_viewer_screen.dart';
 import 'chat_provider.dart';
@@ -228,6 +230,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .addPendingImage(result);
   }
 
+  Future<void> _handleCamera() async {
+    final service = ref.read(imageInputServiceProvider);
+    final img = await service.pickFromCamera();
+    if (img == null || !mounted) return;
+    ref
+        .read(chatProvider(widget.conversationId).notifier)
+        .addPendingImage(img);
+  }
+
   Widget _buildInputBar(bool isLoading, bool isDark) {
     final pendingImages = ref.watch(
         chatProvider(widget.conversationId).select((s) => s.pendingImages));
@@ -279,6 +290,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             ? null
                             : () => _showImagePicker(context),
                       ),
+                      // Camera — mobile only
+                      if (!kIsWeb &&
+                          (defaultTargetPlatform == TargetPlatform.iOS ||
+                              defaultTargetPlatform == TargetPlatform.android))
+                        _InputIcon(
+                          icon: Icons.camera_alt_outlined,
+                          tooltip: '拍照',
+                          isDark: isDark,
+                          onTap: isLoading ? null : _handleCamera,
+                        ),
                       const SizedBox(width: 4),
                       // Text field
                       Expanded(
