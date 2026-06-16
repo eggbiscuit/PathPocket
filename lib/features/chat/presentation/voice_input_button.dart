@@ -168,11 +168,12 @@ class _MicIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Icon(
       listening ? Icons.mic : Icons.mic_none,
       color: listening
-          ? AppColors.error
-          : (ready ? AppColors.primary : AppColors.timestamp),
+          ? p.error
+          : (ready ? p.primary : p.textTertiary),
       size: 24,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../features/chat/presentation/chat_screen.dart';
+import '../../features/chat/presentation/citation_drawer.dart';
 import '../../features/conversations/presentation/conversations_list.dart';
 import '../../features/conversations/presentation/conversations_provider.dart';
 import '../../features/conversations/data/conversation_repository.dart';
@@ -44,7 +45,7 @@ class _DesktopScaffoldState extends State<_DesktopScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
 
     return Scaffold(
       body: Row(
@@ -53,14 +54,13 @@ class _DesktopScaffoldState extends State<_DesktopScaffold> {
           SizedBox(
             width: _sidebarWidth,
             child: Container(
-              color: isDark ? AppColors.bgSidebarDark : AppColors.bgSidebar,
+              color: p.bgSidebar,
               child: const ConversationsList(),
             ),
           ),
 
           // ── Resize handle ─────────────────────────────────────────
           _ResizeHandle(
-            isDark: isDark,
             onDrag: (dx) {
               setState(() {
                 _sidebarWidth =
@@ -84,8 +84,7 @@ class _DesktopScaffoldState extends State<_DesktopScaffold> {
 }
 
 class _ResizeHandle extends StatefulWidget {
-  const _ResizeHandle({required this.isDark, required this.onDrag});
-  final bool isDark;
+  const _ResizeHandle({required this.onDrag});
   final void Function(double dx) onDrag;
 
   @override
@@ -97,6 +96,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return MouseRegion(
       cursor: SystemMouseCursors.resizeColumn,
       onEnter: (_) => setState(() => _hovering = true),
@@ -111,13 +111,7 @@ class _ResizeHandleState extends State<_ResizeHandle> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: _hovering ? 3 : 1,
-              color: _hovering
-                  ? (widget.isDark
-                      ? AppColors.primaryDark
-                      : AppColors.primary)
-                  : (widget.isDark
-                      ? AppColors.dividerDark
-                      : AppColors.divider),
+              color: _hovering ? p.primary : p.divider,
             ),
           ),
         ),
@@ -176,17 +170,15 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondary;
+    final p = context.palette;
 
     return Container(
       height: preferredSize.height,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.bgPageDark : AppColors.bgPage,
+        color: p.bgPage,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.divider,
+            color: p.divider,
           ),
         ),
       ),
@@ -197,7 +189,7 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
             // Hamburger
             Builder(
               builder: (ctx) => IconButton(
-                icon: Icon(Icons.menu, color: textSecondary, size: 22),
+                icon: Icon(Icons.menu, color: p.textSecondary, size: 22),
                 onPressed: () => Scaffold.of(ctx).openDrawer(),
                 tooltip: '会话列表',
               ),
@@ -208,15 +200,13 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 'PathPocket',
                 style: GoogleFonts.dmSerifDisplay(
                   fontSize: 18,
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
+                  color: p.textPrimary,
                 ),
               ),
             ),
             // New chat quick button
             IconButton(
-              icon: Icon(Icons.edit_outlined, color: textSecondary, size: 20),
+              icon: Icon(Icons.edit_outlined, color: p.textSecondary, size: 20),
               onPressed: onNewChat,
               tooltip: '新建对话',
             ),
@@ -241,13 +231,13 @@ class _WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = Breakpoints.of(width) == Breakpoint.desktop;
     final isMobile = Breakpoints.of(width) == Breakpoint.mobile;
 
     return Container(
-      color: isDark ? AppColors.bgPageDark : AppColors.bgPage,
+      color: p.bgPage,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -260,15 +250,13 @@ class _WelcomeScreen extends StatelessWidget {
                   width: isMobile ? 48 : 56,
                   height: isMobile ? 48 : 56,
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.primaryContainerDark
-                        : AppColors.primaryContainer,
+                    color: p.primaryContainer,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                   ),
                   child: Icon(
                     Icons.biotech_outlined,
                     size: isMobile ? 24 : 28,
-                    color: isDark ? AppColors.primaryDark : AppColors.primary,
+                    color: p.primary,
                   ),
                 ),
                 SizedBox(height: isMobile ? 14 : 20),
@@ -277,9 +265,7 @@ class _WelcomeScreen extends StatelessWidget {
                   style: GoogleFonts.dmSerifDisplay(
                     fontSize: isDesktop ? 30 : (isMobile ? 22 : 24),
                     fontWeight: FontWeight.w400,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimary,
+                    color: p.textPrimary,
                     letterSpacing: -0.3,
                   ),
                   textAlign: TextAlign.center,
@@ -289,9 +275,7 @@ class _WelcomeScreen extends StatelessWidget {
                   'HKUST SmartX Lab · 病理学 AI 助手',
                   style: GoogleFonts.dmSans(
                     fontSize: isMobile ? 13 : 14,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
+                    color: p.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -306,7 +290,6 @@ class _WelcomeScreen extends StatelessWidget {
                                     icon: s.icon,
                                     title: s.title,
                                     subtitle: s.subtitle,
-                                    isDark: isDark,
                                     mobile: true,
                                   ),
                                 ))
@@ -324,7 +307,6 @@ class _WelcomeScreen extends StatelessWidget {
                                   icon: s.icon,
                                   title: s.title,
                                   subtitle: s.subtitle,
-                                  isDark: isDark,
                                   mobile: false,
                                 ))
                             .toList(),
@@ -343,13 +325,11 @@ class _SuggestionCard extends StatefulWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.isDark,
     required this.mobile,
   });
   final String icon;
   final String title;
   final String subtitle;
-  final bool isDark;
   final bool mobile;
 
   @override
@@ -361,9 +341,8 @@ class _SuggestionCardState extends State<_SuggestionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = _hovered
-        ? (widget.isDark ? AppColors.primaryDark : AppColors.primary)
-        : (widget.isDark ? AppColors.dividerDark : AppColors.divider);
+    final p = context.palette;
+    final borderColor = _hovered ? p.primary : p.divider;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -372,7 +351,7 @@ class _SuggestionCardState extends State<_SuggestionCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: widget.isDark ? AppColors.bgSurfaceDark : AppColors.bgSurface,
+          color: p.bgSurface,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: borderColor),
         ),
@@ -395,20 +374,13 @@ class _SuggestionCardState extends State<_SuggestionCard> {
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: widget.isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
+                      color: p.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.subtitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 11,
-                      color: widget.isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiary,
-                    ),
+                    style: AppTextStyles.tiny(context),
                   ),
                 ],
               ),
@@ -417,9 +389,7 @@ class _SuggestionCardState extends State<_SuggestionCard> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 12,
-                color: widget.isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiary,
+                color: p.textTertiary,
               ),
           ],
         ),

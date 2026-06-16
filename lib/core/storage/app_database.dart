@@ -183,6 +183,19 @@ class AppDatabase extends _$AppDatabase {
         .watch();
   }
 
+  /// Batch-fetch citations for many messages in a single query.
+  ///
+  /// Returned rows are ordered by `displayOrder`; callers group by
+  /// `messageId`. Avoids the per-message round-trip when loading a
+  /// conversation's full history.
+  Future<List<Citation>> citationsForMessages(List<String> messageIds) {
+    if (messageIds.isEmpty) return Future.value(const []);
+    return (select(citations)
+          ..where((c) => c.messageId.isIn(messageIds))
+          ..orderBy([(c) => OrderingTerm.asc(c.displayOrder)]))
+        .get();
+  }
+
   Future<void> insertCitation(CitationsCompanion citation) =>
       into(citations).insert(citation);
 
