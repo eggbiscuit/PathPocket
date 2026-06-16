@@ -57,19 +57,149 @@ class AppColors {
   // AI bubble left accent border
   static const Color aiBubbleBorder = Color(0xFF016469);
   static const Color aiBubbleBorderDark = Color(0xFF26A69A);
+}
 
-  // Legacy aliases so existing widgets keep compiling
-  static const Color background = bgPage;
-  static const Color aiBubble = bgSurface;
-  static const Color aiBubbleText = textPrimary;
-  static const Color timestamp = textTertiary;
-  static const Color darkBackground = bgPageDark;
-  static const Color darkSurface = bgSurfaceDark;
-  static const Color darkAiBubble = bgSurfaceDark;
-  static const Color darkAiBubbleText = textPrimaryDark;
-  static const Color darkTimestamp = textTertiaryDark;
-  static const Color darkInputFill = bgInputDark;
-  static const Color darkDivider = dividerDark;
+// ── Semantic palette (theme-aware) ────────────────────────────────────────────
+//
+// Resolves light/dark automatically via ThemeData. Read it in widgets with
+// `context.palette` (see the BuildContext extension below) instead of branching
+// on `Theme.of(context).brightness`.
+
+@immutable
+class AppPalette extends ThemeExtension<AppPalette> {
+  const AppPalette({
+    required this.primary,
+    required this.primaryContainer,
+    required this.accent,
+    required this.bgPage,
+    required this.bgSidebar,
+    required this.bgSidebarHover,
+    required this.bgSidebarActive,
+    required this.bgSurface,
+    required this.bgInput,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    required this.divider,
+    required this.error,
+    required this.aiBubbleBorder,
+  });
+
+  final Color primary;
+  final Color primaryContainer;
+  final Color accent;
+  final Color bgPage;
+  final Color bgSidebar;
+  final Color bgSidebarHover;
+  final Color bgSidebarActive;
+  final Color bgSurface;
+  final Color bgInput;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textTertiary;
+  final Color divider;
+  final Color error;
+  final Color aiBubbleBorder;
+
+  static const light = AppPalette(
+    primary: AppColors.primary,
+    primaryContainer: AppColors.primaryContainer,
+    accent: AppColors.accent,
+    bgPage: AppColors.bgPage,
+    bgSidebar: AppColors.bgSidebar,
+    bgSidebarHover: AppColors.bgSidebarHover,
+    bgSidebarActive: AppColors.bgSidebarActive,
+    bgSurface: AppColors.bgSurface,
+    bgInput: AppColors.bgInput,
+    textPrimary: AppColors.textPrimary,
+    textSecondary: AppColors.textSecondary,
+    textTertiary: AppColors.textTertiary,
+    divider: AppColors.divider,
+    error: AppColors.error,
+    aiBubbleBorder: AppColors.aiBubbleBorder,
+  );
+
+  static const dark = AppPalette(
+    primary: AppColors.primaryDark,
+    primaryContainer: AppColors.primaryContainerDark,
+    accent: AppColors.accentDark,
+    bgPage: AppColors.bgPageDark,
+    bgSidebar: AppColors.bgSidebarDark,
+    bgSidebarHover: AppColors.bgSidebarHoverDark,
+    bgSidebarActive: AppColors.bgSidebarActiveDark,
+    bgSurface: AppColors.bgSurfaceDark,
+    bgInput: AppColors.bgInputDark,
+    textPrimary: AppColors.textPrimaryDark,
+    textSecondary: AppColors.textSecondaryDark,
+    textTertiary: AppColors.textTertiaryDark,
+    divider: AppColors.dividerDark,
+    error: AppColors.errorDark,
+    aiBubbleBorder: AppColors.aiBubbleBorderDark,
+  );
+
+  @override
+  AppPalette copyWith({
+    Color? primary,
+    Color? primaryContainer,
+    Color? accent,
+    Color? bgPage,
+    Color? bgSidebar,
+    Color? bgSidebarHover,
+    Color? bgSidebarActive,
+    Color? bgSurface,
+    Color? bgInput,
+    Color? textPrimary,
+    Color? textSecondary,
+    Color? textTertiary,
+    Color? divider,
+    Color? error,
+    Color? aiBubbleBorder,
+  }) {
+    return AppPalette(
+      primary: primary ?? this.primary,
+      primaryContainer: primaryContainer ?? this.primaryContainer,
+      accent: accent ?? this.accent,
+      bgPage: bgPage ?? this.bgPage,
+      bgSidebar: bgSidebar ?? this.bgSidebar,
+      bgSidebarHover: bgSidebarHover ?? this.bgSidebarHover,
+      bgSidebarActive: bgSidebarActive ?? this.bgSidebarActive,
+      bgSurface: bgSurface ?? this.bgSurface,
+      bgInput: bgInput ?? this.bgInput,
+      textPrimary: textPrimary ?? this.textPrimary,
+      textSecondary: textSecondary ?? this.textSecondary,
+      textTertiary: textTertiary ?? this.textTertiary,
+      divider: divider ?? this.divider,
+      error: error ?? this.error,
+      aiBubbleBorder: aiBubbleBorder ?? this.aiBubbleBorder,
+    );
+  }
+
+  @override
+  AppPalette lerp(ThemeExtension<AppPalette>? other, double t) {
+    if (other is! AppPalette) return this;
+    return AppPalette(
+      primary: Color.lerp(primary, other.primary, t)!,
+      primaryContainer:
+          Color.lerp(primaryContainer, other.primaryContainer, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      bgPage: Color.lerp(bgPage, other.bgPage, t)!,
+      bgSidebar: Color.lerp(bgSidebar, other.bgSidebar, t)!,
+      bgSidebarHover: Color.lerp(bgSidebarHover, other.bgSidebarHover, t)!,
+      bgSidebarActive: Color.lerp(bgSidebarActive, other.bgSidebarActive, t)!,
+      bgSurface: Color.lerp(bgSurface, other.bgSurface, t)!,
+      bgInput: Color.lerp(bgInput, other.bgInput, t)!,
+      textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
+      textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+      divider: Color.lerp(divider, other.divider, t)!,
+      error: Color.lerp(error, other.error, t)!,
+      aiBubbleBorder: Color.lerp(aiBubbleBorder, other.aiBubbleBorder, t)!,
+    );
+  }
+}
+
+extension PaletteX on BuildContext {
+  AppPalette get palette => Theme.of(this).extension<AppPalette>()!;
 }
 
 // ── Radius ────────────────────────────────────────────────────────────────────
@@ -94,20 +224,11 @@ class AppRadius {
 class AppTextStyles {
   AppTextStyles._();
 
-  static Color _primary(BuildContext ctx) =>
-      Theme.of(ctx).brightness == Brightness.dark
-          ? AppColors.textPrimaryDark
-          : AppColors.textPrimary;
+  static Color _primary(BuildContext ctx) => ctx.palette.textPrimary;
 
-  static Color _secondary(BuildContext ctx) =>
-      Theme.of(ctx).brightness == Brightness.dark
-          ? AppColors.textSecondaryDark
-          : AppColors.textSecondary;
+  static Color _secondary(BuildContext ctx) => ctx.palette.textSecondary;
 
-  static Color _tertiary(BuildContext ctx) =>
-      Theme.of(ctx).brightness == Brightness.dark
-          ? AppColors.textTertiaryDark
-          : AppColors.textTertiary;
+  static Color _tertiary(BuildContext ctx) => ctx.palette.textTertiary;
 
   static TextStyle display(BuildContext ctx) => GoogleFonts.dmSerifDisplay(
         fontSize: 32, fontWeight: FontWeight.w400,
@@ -149,6 +270,7 @@ ThemeData buildAppTheme() {
     useMaterial3: true,
     colorScheme: cs,
     textTheme: base,
+    extensions: const [AppPalette.light],
     scaffoldBackgroundColor: AppColors.bgPage,
     dividerColor: AppColors.divider,
     appBarTheme: AppBarTheme(
@@ -224,6 +346,7 @@ ThemeData buildDarkTheme() {
     useMaterial3: true,
     colorScheme: cs,
     textTheme: base,
+    extensions: const [AppPalette.dark],
     scaffoldBackgroundColor: AppColors.bgPageDark,
     dividerColor: AppColors.dividerDark,
     appBarTheme: AppBarTheme(

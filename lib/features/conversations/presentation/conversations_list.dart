@@ -19,7 +19,7 @@ class ConversationsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
     final conversationsAsync = ref.watch(conversationsStreamProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -31,33 +31,29 @@ class ConversationsList extends ConsumerWidget {
                   await _createConversation(ref, user.id);
                   onSelect?.call();
                 },
-          isDark: isDark,
         ),
         Expanded(
           child: conversationsAsync.when(
             data: (items) {
-              if (items.isEmpty) return _Empty(isDark: isDark);
-              return _GroupedList(items: items, onSelect: onSelect, isDark: isDark);
+              if (items.isEmpty) return const _Empty();
+              return _GroupedList(items: items, onSelect: onSelect);
             },
             loading: () => Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: isDark ? AppColors.primaryDark : AppColors.primary,
+                color: p.primary,
               ),
             ),
             error: (e, _) => Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 '加载失败：$e',
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  color: AppColors.error,
-                ),
+                style: AppTextStyles.caption(context).copyWith(color: p.error),
               ),
             ),
           ),
         ),
-        if (user != null) _Footer(user: user, isDark: isDark),
+        if (user != null) _Footer(user: user),
       ],
     );
   }
@@ -79,12 +75,12 @@ class ConversationsList extends ConsumerWidget {
 // ── Sidebar header with logo + new chat button ────────────────────────────────
 
 class _SidebarHeader extends StatelessWidget {
-  const _SidebarHeader({required this.onNewChat, required this.isDark});
+  const _SidebarHeader({required this.onNewChat});
   final VoidCallback? onNewChat;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
       child: Column(
@@ -97,7 +93,7 @@ class _SidebarHeader extends StatelessWidget {
               'PathPocket',
               style: GoogleFonts.dmSerifDisplay(
                 fontSize: 17,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
           ),
@@ -110,22 +106,19 @@ class _SidebarHeader extends StatelessWidget {
               icon: Icon(
                 Icons.add,
                 size: 16,
-                color: isDark ? AppColors.primaryDark : AppColors.primary,
+                color: p.primary,
               ),
               label: Text(
                 '新建对话',
                 style: GoogleFonts.dmSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.primaryDark : AppColors.primary,
+                  color: p.primary,
                 ),
               ),
               style: TextButton.styleFrom(
-                backgroundColor: isDark
-                    ? AppColors.primaryContainerDark
-                    : AppColors.primaryContainer,
-                foregroundColor:
-                    isDark ? AppColors.primaryDark : AppColors.primary,
+                backgroundColor: p.primaryContainer,
+                foregroundColor: p.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
@@ -143,8 +136,7 @@ class _SidebarHeader extends StatelessWidget {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 class _Empty extends StatelessWidget {
-  const _Empty({required this.isDark});
-  final bool isDark;
+  const _Empty();
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +149,7 @@ class _Empty extends StatelessWidget {
           style: GoogleFonts.dmSans(
             fontSize: 12,
             height: 1.6,
-            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            color: context.palette.textTertiary,
           ),
         ),
       ),
@@ -171,11 +163,9 @@ class _GroupedList extends ConsumerWidget {
   const _GroupedList({
     required this.items,
     required this.onSelect,
-    required this.isDark,
   });
   final List<Conversation> items;
   final VoidCallback? onSelect;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -188,14 +178,13 @@ class _GroupedList extends ConsumerWidget {
       itemBuilder: (context, idx) {
         var i = idx;
         for (final g in groups) {
-          if (i == 0) return _SectionLabel(label: g.label, isDark: isDark);
+          if (i == 0) return _SectionLabel(label: g.label);
           i -= 1;
           if (i < g.items.length) {
             final c = g.items[i];
             return _ConversationTile(
               conversation: c,
               selected: c.id == selected,
-              isDark: isDark,
               onTap: () {
                 ref.read(selectedConversationProvider.notifier).select(c.id);
                 onSelect?.call();
@@ -216,12 +205,10 @@ class _ConversationTile extends ConsumerStatefulWidget {
   const _ConversationTile({
     required this.conversation,
     required this.selected,
-    required this.isDark,
     required this.onTap,
   });
   final Conversation conversation;
   final bool selected;
-  final bool isDark;
   final VoidCallback onTap;
 
   @override
@@ -231,22 +218,15 @@ class _ConversationTile extends ConsumerStatefulWidget {
 class _ConversationTileState extends ConsumerState<_ConversationTile> {
   bool _hovered = false;
 
-  Color get _bg {
-    if (widget.selected) {
-      return widget.isDark
-          ? AppColors.bgSidebarActiveDark
-          : AppColors.bgSidebarActive;
-    }
-    if (_hovered) {
-      return widget.isDark
-          ? AppColors.bgSidebarHoverDark
-          : AppColors.bgSidebarHover;
-    }
+  Color _bg(AppPalette p) {
+    if (widget.selected) return p.bgSidebarActive;
+    if (_hovered) return p.bgSidebarHover;
     return Colors.transparent;
   }
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -254,7 +234,7 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
         decoration: BoxDecoration(
-          color: _bg,
+          color: _bg(p),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: InkWell(
@@ -274,9 +254,7 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
                       fontWeight: widget.selected
                           ? FontWeight.w600
                           : FontWeight.w400,
-                      color: widget.isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
+                      color: p.textPrimary,
                     ),
                   ),
                 ),
@@ -285,9 +263,7 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
                     icon: Icon(
                       Icons.more_horiz,
                       size: 16,
-                      color: widget.isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiary,
+                      color: p.textTertiary,
                     ),
                     tooltip: '更多',
                     onSelected: (v) => _handleAction(context, v),
@@ -301,7 +277,7 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
                         value: 'delete',
                         child: Text('删除',
                             style: GoogleFonts.dmSans(
-                                fontSize: 13, color: AppColors.error)),
+                                fontSize: 13, color: p.error)),
                       ),
                     ],
                   ),
@@ -340,13 +316,12 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: GoogleFonts.dmSans(),
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('取消', style: GoogleFonts.dmSans()),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
@@ -358,6 +333,7 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
   }
 
   Future<bool?> _confirmDelete(BuildContext context) {
+    final p = context.palette;
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -367,13 +343,13 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('取消', style: GoogleFonts.dmSans()),
+            child: const Text('取消'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('删除',
                 style: GoogleFonts.dmSans(
-                    color: AppColors.error, fontWeight: FontWeight.w600)),
+                    color: p.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -384,9 +360,8 @@ class _ConversationTileState extends ConsumerState<_ConversationTile> {
 // ── Section label ─────────────────────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.label, required this.isDark});
+  const _SectionLabel({required this.label});
   final String label;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -398,7 +373,7 @@ class _SectionLabel extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.8,
-          color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+          color: context.palette.textTertiary,
         ),
       ),
     );
@@ -408,18 +383,18 @@ class _SectionLabel extends StatelessWidget {
 // ── Footer ────────────────────────────────────────────────────────────────────
 
 class _Footer extends ConsumerWidget {
-  const _Footer({required this.user, required this.isDark});
+  const _Footer({required this.user});
   final User user;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final p = context.palette;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.dividerDark : AppColors.divider,
+            color: p.divider,
           ),
         ),
       ),
@@ -427,13 +402,11 @@ class _Footer extends ConsumerWidget {
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: isDark
-                ? AppColors.primaryContainerDark
-                : AppColors.primaryContainer,
+            backgroundColor: p.primaryContainer,
             child: Icon(
               Icons.person,
               size: 15,
-              color: isDark ? AppColors.primaryDark : AppColors.primary,
+              color: p.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -444,9 +417,7 @@ class _Footer extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.dmSans(
                 fontSize: 13,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimary,
+                color: p.textPrimary,
               ),
             ),
           ),
@@ -455,8 +426,7 @@ class _Footer extends ConsumerWidget {
             icon: Icon(
               Icons.settings_outlined,
               size: 17,
-              color:
-                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+              color: p.textTertiary,
             ),
             onPressed: () => Navigator.push(
               context,
@@ -468,8 +438,7 @@ class _Footer extends ConsumerWidget {
             icon: Icon(
               Icons.logout,
               size: 17,
-              color:
-                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+              color: p.textTertiary,
             ),
             onPressed: () => ref.read(authProvider.notifier).logout(),
           ),

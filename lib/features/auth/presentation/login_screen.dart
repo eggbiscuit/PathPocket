@@ -35,8 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _startCountdown();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('验证码已发送（mock：固定为 123456）',
-              style: GoogleFonts.dmSans()),
+          content: const Text('验证码已发送（mock：固定为 123456）'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -73,7 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final p = context.palette;
 
     ref.listen<AuthState>(authProvider, (prev, next) {
       final err = next.errorMessage;
@@ -81,8 +80,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(
-            backgroundColor: AppColors.error,
-            content: Text(err, style: GoogleFonts.dmSans()),
+            backgroundColor: p.error,
+            content: Text(err),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -91,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgPageDark : AppColors.bgPage,
+      backgroundColor: p.bgPage,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -107,17 +106,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.primaryContainerDark
-                            : AppColors.primaryContainer,
+                        color: p.primaryContainer,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                       ),
                       child: Icon(
                         Icons.biotech_outlined,
                         size: 32,
-                        color: isDark
-                            ? AppColors.primaryDark
-                            : AppColors.primary,
+                        color: p.primary,
                       ),
                     ),
                   ),
@@ -127,9 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSerifDisplay(
                       fontSize: 28,
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
+                      color: p.textPrimary,
                       letterSpacing: -0.3,
                     ),
                   ),
@@ -139,9 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                     style: GoogleFonts.dmSans(
                       fontSize: 13,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary,
+                      color: p.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 36),
@@ -149,11 +140,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     segments: [
                       ButtonSegment(
                         value: _LoginMode.sms,
-                        label: Text('短信验证码', style: GoogleFonts.dmSans()),
+                        label: const Text('短信验证码'),
                       ),
                       ButtonSegment(
                         value: _LoginMode.password,
-                        label: Text('密码登录', style: GoogleFonts.dmSans()),
+                        label: const Text('密码登录'),
                       ),
                     ],
                     selected: {_mode},
@@ -166,27 +157,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     keyboardType: TextInputType.phone,
                     maxLength: 11,
                     style: GoogleFonts.dmSans(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
+                      color: p.textPrimary,
                     ),
                     decoration: InputDecoration(
                       labelText: '手机号',
-                      labelStyle: GoogleFonts.dmSans(
-                          color: AppColors.textTertiary),
+                      labelStyle: GoogleFonts.dmSans(color: p.textTertiary),
                       counterText: '',
                       prefixIcon: Icon(Icons.phone_outlined,
-                          size: 18,
-                          color: isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiary),
+                          size: 18, color: p.textTertiary),
                     ),
                   ),
                   const SizedBox(height: 12),
                   if (_mode == _LoginMode.sms)
-                    _buildCodeField(isDark)
+                    _buildCodeField(p)
                   else
-                    _buildPasswordField(isDark),
+                    _buildPasswordField(p),
                   const SizedBox(height: 20),
                   SizedBox(
                     height: 46,
@@ -211,9 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       height: 1.5,
-                      color: isDark
-                          ? AppColors.textTertiaryDark
-                          : AppColors.textTertiary,
+                      color: p.textTertiary,
                     ),
                   ),
                 ],
@@ -225,7 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildCodeField(bool isDark) {
+  Widget _buildCodeField(AppPalette p) {
     final canSend = _smsCountdown == 0 && _phone.text.trim().length == 11;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,20 +219,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             style: GoogleFonts.dmSans(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimary,
+              color: p.textPrimary,
             ),
             decoration: InputDecoration(
               labelText: '验证码',
-              labelStyle:
-                  GoogleFonts.dmSans(color: AppColors.textTertiary),
+              labelStyle: GoogleFonts.dmSans(color: p.textTertiary),
               counterText: '',
               prefixIcon: Icon(Icons.sms_outlined,
-                  size: 18,
-                  color: isDark
-                      ? AppColors.textTertiaryDark
-                      : AppColors.textTertiary),
+                  size: 18, color: p.textTertiary),
             ),
           ),
         ),
@@ -260,11 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             onPressed: canSend ? _sendCode : null,
             style: OutlinedButton.styleFrom(
               side: BorderSide(
-                color: canSend
-                    ? (isDark ? AppColors.primaryDark : AppColors.primary)
-                    : (isDark
-                        ? AppColors.dividerDark
-                        : AppColors.divider),
+                color: canSend ? p.primary : p.divider,
               ),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -278,22 +251,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildPasswordField(bool isDark) {
+  Widget _buildPasswordField(AppPalette p) {
     return TextField(
       controller: _password,
       obscureText: true,
       style: GoogleFonts.dmSans(
-        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+        color: p.textPrimary,
       ),
       decoration: InputDecoration(
         labelText: '密码',
-        labelStyle:
-            GoogleFonts.dmSans(color: AppColors.textTertiary),
+        labelStyle: GoogleFonts.dmSans(color: p.textTertiary),
         prefixIcon: Icon(Icons.lock_outline,
-            size: 18,
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiary),
+            size: 18, color: p.textTertiary),
       ),
     );
   }

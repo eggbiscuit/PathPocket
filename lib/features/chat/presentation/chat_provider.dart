@@ -90,9 +90,23 @@ class ChatNotifier extends Notifier<ChatState> {
 
   Future<void> _loadFromDb(String conversationId) async {
     final rows = await _db.messagesFor(conversationId);
+    final citationRows =
+        await _db.citationsForMessages(rows.map((r) => r.id).toList());
+
+    // Group citations by message — preserves the displayOrder from the query.
+    final citationsByMessage = <String, List<Citation>>{};
+    for (final c in citationRows) {
+      (citationsByMessage[c.messageId] ??= []).add(Citation(
+        id: c.id,
+        title: c.title,
+        snippet: c.snippet,
+        source: c.source,
+        url: c.url,
+      ));
+    }
+
     final messages = <Message>[];
     for (final r in rows) {
-      final citations = await _db.watchCitations(r.id).first;
       messages.add(Message(
         id: r.id,
         conversationId: r.conversationId,
@@ -106,15 +120,7 @@ class ChatNotifier extends Notifier<ChatState> {
           (s) => s.name == r.status,
           orElse: () => MessageStatus.done,
         ),
-        citations: citations
-            .map((c) => Citation(
-                  id: c.id,
-                  title: c.title,
-                  snippet: c.snippet,
-                  source: c.source,
-                  url: c.url,
-                ))
-            .toList(),
+        citations: citationsByMessage[r.id] ?? const [],
         feedback: Feedback.values.firstWhere(
           (f) => f.name == r.feedback,
           orElse: () => Feedback.none,
