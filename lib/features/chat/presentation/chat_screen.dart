@@ -71,8 +71,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
-    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
-
     return Container(
       color: p.bgPage,
       child: Stack(
@@ -87,17 +85,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 children: [
                   Expanded(child: _buildList(state)),
                   if (state.isLoading) _buildThinkingBar(p),
-                  // Reserve space for the input bar + keyboard
-                  SizedBox(height: 96 + viewInsets),
+                  // Reserve space for the input bar.
+                  const SizedBox(height: 96),
                 ],
               ),
             ),
           ),
-          // ── Floating input bar — lifts above the keyboard ─────
+          // ── Floating input bar ────────────────────────────────
+          // Scaffold resizes the body when the keyboard opens, so bottom:0
+          // keeps the bar pinned just above the keyboard.
           Positioned(
             left: 0,
             right: 0,
-            bottom: viewInsets,
+            bottom: 0,
             child: ChatInputBar(
               conversationId: widget.conversationId,
               isLoading: state.isLoading,
@@ -107,7 +107,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (_smartScroll.showJumpFab)
             Positioned(
               right: 16,
-              bottom: 110 + viewInsets,
+              bottom: 110,
               child: _JumpFab(onTap: _smartScroll.jumpToBottom),
             ),
         ],

@@ -129,42 +129,54 @@ class _MobileScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      // ChatScreen lifts its own input bar above the keyboard via viewInsets,
-      // so let the body keep full height instead of letting Scaffold resize it.
-      resizeToAvoidBottomInset: false,
-      appBar: _MobileAppBar(
-        conversationId: conversationId,
-        onNewChat: () async {
-          final user = ref.read(currentUserProvider);
-          if (user == null) return;
-          final now = DateTime.now();
-          final conv = Conversation(
-            id: generateConversationId(),
-            userId: user.id,
-            title: '新对话',
-            createdAt: now,
-            updatedAt: now,
+    final body = conversationId == null
+        ? const _WelcomeScreen()
+        : CitationDrawerHost(
+            child: ChatScreen(conversationId: conversationId!),
           );
-          await ref.read(conversationRepositoryProvider).create(conv);
-          ref.read(selectedConversationProvider.notifier).select(conv.id);
-        },
-      ),
+
+    return Scaffold(
+      // Let Scaffold resize the body when the keyboard opens; ChatScreen's
+      // input bar sits at the bottom of the (shrunken) body, landing just
+      // above the keyboard.
       drawer: Drawer(
         child: ConversationsList(
           onSelect: () => Navigator.of(context).pop(),
         ),
       ),
-      body: conversationId == null
-          ? const _WelcomeScreen()
-          : CitationDrawerHost(
-              child: ChatScreen(conversationId: conversationId!),
+      // The top bar lives inside the body (not the appBar slot) wrapped in a
+      // SafeArea, so it gets its full height *below* the status bar instead of
+      // being squeezed into a fixed 52px that the notch then eats into.
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _MobileAppBar(
+              conversationId: conversationId,
+              onNewChat: () async {
+                final user = ref.read(currentUserProvider);
+                if (user == null) return;
+                final now = DateTime.now();
+                final conv = Conversation(
+                  id: generateConversationId(),
+                  userId: user.id,
+                  title: '新对话',
+                  createdAt: now,
+                  updatedAt: now,
+                );
+                await ref.read(conversationRepositoryProvider).create(conv);
+                ref.read(selectedConversationProvider.notifier).select(conv.id);
+              },
             ),
+            Expanded(child: body),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
+class _MobileAppBar extends StatelessWidget {
   const _MobileAppBar({required this.conversationId, required this.onNewChat});
   final String? conversationId;
   final VoidCallback onNewChat;
@@ -174,49 +186,41 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   static const String _modelName = 'PathPocket';
 
   @override
-  Size get preferredSize => const Size.fromHeight(52);
-
-  @override
   Widget build(BuildContext context) {
     final p = context.palette;
 
-    return Container(
-      height: preferredSize.height,
-      color: p.bgPage,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              // Hamburger
-              Builder(
-                builder: (ctx) => IconButton(
-                  icon: Icon(Icons.menu, color: p.textSecondary, size: 22),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
-                  tooltip: '会话列表',
+    return SizedBox(
+      height: 56,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          children: [
+            // Hamburger
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: Icon(Icons.menu, color: p.textSecondary, size: 24),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+                tooltip: '会话列表',
+              ),
+            ),
+            // Centered model name
+            Expanded(
+              child: Text(
+                _modelName,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSerifDisplay(
+                  fontSize: 18,
+                  color: p.textPrimary,
                 ),
               ),
-              // Centered model name
-              Expanded(
-                child: Text(
-                  _modelName,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.dmSerifDisplay(
-                    fontSize: 18,
-                    color: p.textPrimary,
-                  ),
-                ),
-              ),
-              // New chat quick button
-              IconButton(
-                icon:
-                    Icon(Icons.edit_outlined, color: p.textSecondary, size: 20),
-                onPressed: onNewChat,
-                tooltip: '新建对话',
-              ),
-            ],
-          ),
+            ),
+            // New chat quick button
+            IconButton(
+              icon: Icon(Icons.edit_outlined, color: p.textSecondary, size: 22),
+              onPressed: onNewChat,
+              tooltip: '新建对话',
+            ),
+          ],
         ),
       ),
     );

@@ -47,7 +47,9 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   @override
   void initState() {
     super.initState();
-    if (_speechSupported) _init();
+    // Don't initialize here: on Android the very first initialize() may race
+    // with the permission prompt and fail, leaving the engine in a bad state.
+    // Initialize lazily on first press instead (see _startListening).
   }
 
   /// Initializes the engine, requesting mic permission on first use.
