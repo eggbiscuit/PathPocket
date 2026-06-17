@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../core/theme.dart';
@@ -40,6 +42,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   bool _listening = false;
   bool _initializing = false;
   String _partial = '';
+  OverlayEntry? _overlay;
 
   @override
   void initState() {
@@ -58,6 +61,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       ok = await _stt.initialize(
         onError: (err) {
           if (mounted) setState(() => _listening = false);
+          _removeOverlay();
           _notify('语音识别出错：${err.errorMsg}');
         },
         onStatus: (status) {
@@ -74,6 +78,27 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     return ok;
   }
 
+  /// Ensures mic permission. On mobile, surfaces an "open settings" action when
+  /// the user has permanently denied it (speech_to_text alone can't reopen the
+  /// system prompt once permanently denied).
+  Future<bool> _ensurePermission() async {
+    if (kIsWeb || _isDesktop) return true;
+    var status = await Permission.microphone.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) {
+      _notifyOpenSettings();
+      return false;
+    }
+    status = await Permission.microphone.request();
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) {
+      _notifyOpenSettings();
+    } else {
+      _notify('需要麦克风权限才能使用语音输入');
+    }
+    return false;
+  }
+
   void _notify(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -86,18 +111,37 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       ));
   }
 
+  void _notifyOpenSettings() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: const Text('麦克风权限已被拒绝，请在系统设置中开启'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md)),
+        action: SnackBarAction(
+          label: '打开设置',
+          onPressed: openAppSettings,
+        ),
+      ));
+  }
+
   @override
   void dispose() {
     _stt.stop();
+    _removeOverlay();
     super.dispose();
   }
 
   Future<void> _startListening() async {
     if (_listening) return;
+    final allowed = await _ensurePermission();
+    if (!allowed) return;
     if (!_ready) {
       final ok = await _init();
       if (!ok) {
-        _notify('无法使用语音输入，请在系统设置中授予麦克风权限');
+        _notify('无法启动语音识别引擎');
         return;
       }
     }
@@ -105,6 +149,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       _listening = true;
       _partial = '';
     });
+    _showOverlay();
     await _stt.listen(
       onResult: (r) {
         if (!mounted) return;
@@ -115,6 +160,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
         } else {
           setState(() => _partial = text);
         }
+        _overlay?.markNeedsBuild();
       },
       listenOptions: SpeechListenOptions(
         listenFor: const Duration(seconds: 60),
@@ -127,6 +173,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
 
   Future<void> _stopListening() async {
     await _stt.stop();
+    _removeOverlay();
     if (mounted) {
       final hadPartial = _partial.isNotEmpty;
       if (hadPartial) _commitText(_partial);
@@ -148,6 +195,26 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       text: appended,
       selection: TextSelection.collapsed(offset: appended.length),
     );
+  }
+
+  // ── Live transcript overlay ───────────────────────────────────────────────
+
+  void _showOverlay() {
+    _removeOverlay();
+    final overlayState = Overlay.of(context, rootOverlay: true);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    _overlay = OverlayEntry(
+      builder: (_) => _PartialTranscriptOverlay(
+        partial: _partial,
+        bottomInset: bottomInset,
+      ),
+    );
+    overlayState.insert(_overlay!);
+  }
+
+  void _removeOverlay() {
+    _overlay?.remove();
+    _overlay = null;
   }
 
   // ── Desktop: click-to-toggle ──────────────────────────────────────────────
@@ -214,6 +281,66 @@ class _MicIcon extends StatelessWidget {
           ? p.error
           : (ready ? p.primary : p.textTertiary),
       size: 24,
+    );
+  }
+}
+
+/// Floating panel shown above the keyboard/input bar while recording,
+/// displaying the live (partial) transcript — mirrors 豆包 / Gemini.
+class _PartialTranscriptOverlay extends StatelessWidget {
+  const _PartialTranscriptOverlay({
+    required this.partial,
+    required this.bottomInset,
+  });
+  final String partial;
+  final double bottomInset;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Positioned(
+      left: 24,
+      right: 24,
+      bottom: bottomInset + 120,
+      child: IgnorePointer(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: p.bgSurface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: p.divider),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.mic, size: 18, color: p.error),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    partial.isEmpty ? '正在聆听…' : partial,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14,
+                      height: 1.4,
+                      color: partial.isEmpty ? p.textTertiary : p.textPrimary,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
