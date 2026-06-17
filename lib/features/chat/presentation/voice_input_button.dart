@@ -235,13 +235,15 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   // ── Mobile: press-and-hold ────────────────────────────────────────────────
 
   Widget _mobileButton() {
+    // No Tooltip here: on Android a Tooltip defaults to longPress trigger and
+    // would steal the long-press gesture (showing its bubble instead of
+    // starting recording). Use a bare GestureDetector.
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onLongPressStart: (_) => _startListening(),
       onLongPressEnd: (_) => _stopListening(),
-      child: Tooltip(
-        message: '按住说话',
-        child: _MicIcon(listening: _listening, ready: _ready),
-      ),
+      onLongPressCancel: _stopListening,
+      child: _MicIcon(listening: _listening, ready: _ready),
     );
   }
 

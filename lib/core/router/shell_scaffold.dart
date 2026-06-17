@@ -136,9 +136,10 @@ class _MobileScaffold extends ConsumerWidget {
           );
 
     return Scaffold(
-      // Let Scaffold resize the body when the keyboard opens; ChatScreen's
-      // input bar sits at the bottom of the (shrunken) body, landing just
-      // above the keyboard.
+      // ChatScreen drives its own keyboard lift via View.viewInsets
+      // (Scaffold's MediaQuery-based resize is unreliable on some OEM ROMs),
+      // so keep the body at full height here.
+      resizeToAvoidBottomInset: false,
       drawer: Drawer(
         child: ConversationsList(
           onSelect: () => Navigator.of(context).pop(),
