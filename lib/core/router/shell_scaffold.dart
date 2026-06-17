@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../features/chat/presentation/chat_provider.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/chat/presentation/citation_drawer.dart';
 import '../../features/conversations/presentation/conversations_list.dart';
@@ -219,18 +220,35 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ── Welcome / Empty State ─────────────────────────────────────────────────────
 
-class _WelcomeScreen extends StatelessWidget {
+class _WelcomeScreen extends ConsumerWidget {
   const _WelcomeScreen();
 
   static const _suggestions = [
-    (icon: '📋', title: '分析病理报告', subtitle: '上传报告，获取 AI 解读'),
-    (icon: '🔬', title: '鉴别诊断', subtitle: '描述病理特征，辅助鉴别'),
-    (icon: '📚', title: '文献引用查询', subtitle: '查找相关病理学文献'),
-    (icon: '🖼️', title: '上传病理切片', subtitle: '图像分析与特征提取'),
+    (icon: '📋', title: '分析病理报告', subtitle: '上传报告，获取 AI 解读', prompt: '请帮我分析一份病理报告。'),
+    (icon: '🔬', title: '鉴别诊断', subtitle: '描述病理特征，辅助鉴别', prompt: '我想做鉴别诊断，请帮我分析以下病理特征。'),
+    (icon: '📚', title: '文献引用查询', subtitle: '查找相关病理学文献', prompt: '请帮我查找相关的病理学文献。'),
+    (icon: '🖼️', title: '上传病理切片', subtitle: '图像分析与特征提取', prompt: '我想上传一张病理切片做图像分析与特征提取。'),
   ];
 
+  Future<void> _startConversation(
+      WidgetRef ref, String prompt) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final now = DateTime.now();
+    final conv = Conversation(
+      id: generateConversationId(),
+      userId: user.id,
+      title: prompt,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await ref.read(conversationRepositoryProvider).create(conv);
+    ref.read(selectedConversationProvider.notifier).select(conv.id);
+    await ref.read(chatProvider(conv.id).notifier).sendMessage(prompt);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = context.palette;
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = Breakpoints.of(width) == Breakpoint.desktop;
@@ -291,6 +309,8 @@ class _WelcomeScreen extends StatelessWidget {
                                     title: s.title,
                                     subtitle: s.subtitle,
                                     mobile: true,
+                                    onTap: () =>
+                                        _startConversation(ref, s.prompt),
                                   ),
                                 ))
                             .toList(),
@@ -308,6 +328,8 @@ class _WelcomeScreen extends StatelessWidget {
                                   title: s.title,
                                   subtitle: s.subtitle,
                                   mobile: false,
+                                  onTap: () =>
+                                      _startConversation(ref, s.prompt),
                                 ))
                             .toList(),
                       ),
@@ -326,11 +348,13 @@ class _SuggestionCard extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.mobile,
+    required this.onTap,
   });
   final String icon;
   final String title;
   final String subtitle;
   final bool mobile;
+  final VoidCallback onTap;
 
   @override
   State<_SuggestionCard> createState() => _SuggestionCardState();
@@ -348,50 +372,54 @@ class _SuggestionCardState extends State<_SuggestionCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: p.bgSurface,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: borderColor),
-        ),
-        padding: EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: widget.mobile ? 14 : 12,
-        ),
-        child: Row(
-          children: [
-            Text(widget.icon,
-                style: TextStyle(fontSize: widget.mobile ? 20 : 16)),
-            SizedBox(width: widget.mobile ? 12 : 6),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.title,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: p.textPrimary,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: p.bgSurface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: borderColor),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: widget.mobile ? 14 : 12,
+          ),
+          child: Row(
+            children: [
+              Text(widget.icon,
+                  style: TextStyle(fontSize: widget.mobile ? 20 : 16)),
+              SizedBox(width: widget.mobile ? 12 : 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: p.textPrimary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: AppTextStyles.tiny(context),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.subtitle,
+                      style: AppTextStyles.tiny(context),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (widget.mobile)
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 12,
-                color: p.textTertiary,
-              ),
-          ],
+              if (widget.mobile)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: p.textTertiary,
+                ),
+            ],
+          ),
         ),
       ),
     );
