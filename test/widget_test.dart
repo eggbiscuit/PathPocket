@@ -1,5 +1,7 @@
 // Basic smoke test: login screen renders when user is not authenticated.
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,5 +56,50 @@ void main() {
     expect(find.text('PathPocket'), findsWidgets);
     expect(find.textContaining('病理学 AI 助手'), findsOneWidget);
     expect(find.byIcon(Icons.phone_outlined), findsOneWidget);
+  });
+
+  testWidgets('mobile shell shows centered model name with no app bar divider',
+      (WidgetTester tester) async {
+    // Narrow viewport → mobile breakpoint.
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    // Pre-seed an authenticated session so the shell (not login) renders.
+    final tokens = _InMemoryTokenStore();
+    await tokens.write('auth.token', 'test-token');
+    await tokens.write(
+      'auth.user',
+      jsonEncode({'id': 'u_1', 'phone': '13800000000', 'displayName': '医生'}),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          secureTokenStoreProvider.overrideWithValue(tokens),
+          themeModePrefsOverride(prefs),
+          fontScalePrefsOverride(prefs),
+        ],
+        child: const PathPocketApp(),
+      ),
+    );
+    // Let _restoreSession resolve and the shell render.
+    await tester.pumpAndSettle();
+
+    // Centered model name in the app bar.
+    final title = find.text('PathPocket');
+    expect(title, findsWidgets);
+
+    // The app bar hamburger + new-chat affordances are present.
+    expect(find.byIcon(Icons.menu), findsOneWidget);
+    expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
   });
 }

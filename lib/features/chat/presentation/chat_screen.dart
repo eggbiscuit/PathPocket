@@ -18,23 +18,39 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with WidgetsBindingObserver {
   late final SmartScrollController _smartScroll;
   String? _lastErrorShown;
   int _prevMessageCount = 0;
   String _prevLastContent = '';
+  double _keyboardInset = 0;
 
   @override
   void initState() {
     super.initState();
     _smartScroll = SmartScrollController();
     _smartScroll.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _smartScroll.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    // Read the real keyboard inset straight from the view. On some OEM ROMs
+    // (e.g. MIUI) the inset doesn't propagate cleanly through Scaffold's
+    // MediaQuery, so we drive the input-bar lift ourselves.
+    final view = View.of(context);
+    final inset = view.viewInsets.bottom / view.devicePixelRatio;
+    if (inset != _keyboardInset) {
+      setState(() => _keyboardInset = inset);
+    }
   }
 
   @override
@@ -78,20 +94,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // ── Message list ──────────────────────────────────────
           Positioned.fill(
             bottom: 0,
-            child: Column(
-              children: [
-                Expanded(child: _buildList(state)),
-                if (state.isLoading) _buildThinkingBar(p),
-                // Reserve space for the input bar
-                const SizedBox(height: 96),
-              ],
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.translucent,
+              child: Column(
+                children: [
+                  Expanded(child: _buildList(state)),
+                  if (state.isLoading) _buildThinkingBar(p),
+                  // Reserve space for the input bar + keyboard.
+                  SizedBox(height: 96 + _keyboardInset),
+                ],
+              ),
             ),
           ),
-          // ── Floating input bar ────────────────────────────────
+          // ── Floating input bar — lifted above the keyboard ────
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: _keyboardInset,
             child: ChatInputBar(
               conversationId: widget.conversationId,
               isLoading: state.isLoading,
@@ -101,7 +121,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (_smartScroll.showJumpFab)
             Positioned(
               right: 16,
-              bottom: 110,
+              bottom: 110 + _keyboardInset,
               child: _JumpFab(onTap: _smartScroll.jumpToBottom),
             ),
         ],

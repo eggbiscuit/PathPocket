@@ -1,12 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme.dart';
-import '../../image_input/data/image_input_service.dart';
 import '../../image_input/domain/pending_image.dart';
 import '../../image_input/presentation/image_picker_bar.dart';
 import '../../image_input/presentation/image_viewer_screen.dart';
@@ -69,13 +67,6 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
     ref.read(chatProvider(widget.conversationId).notifier).addPendingImage(result);
   }
 
-  Future<void> _handleCamera() async {
-    final service = ref.read(imageInputServiceProvider);
-    final img = await service.pickFromCamera();
-    if (img == null || !mounted) return;
-    ref.read(chatProvider(widget.conversationId).notifier).addPendingImage(img);
-  }
-
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -112,77 +103,67 @@ class _ChatInputBarState extends ConsumerState<ChatInputBar> {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _InputIcon(
-                        icon: Icons.attach_file,
-                        tooltip: '附加图片',
-                        onTap:
-                            isLoading ? null : () => _showImagePicker(context),
-                      ),
-                      if (!kIsWeb &&
-                          (defaultTargetPlatform == TargetPlatform.iOS ||
-                              defaultTargetPlatform == TargetPlatform.android))
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: p.bgInput,
+                      borderRadius: BorderRadius.circular(AppRadius.xl + 6),
+                      border: Border.all(color: p.divider),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
                         _InputIcon(
-                          icon: Icons.camera_alt_outlined,
-                          tooltip: '拍照',
-                          onTap: isLoading ? null : _handleCamera,
+                          icon: Icons.add,
+                          tooltip: '附加图片',
+                          onTap: isLoading
+                              ? null
+                              : () => _showImagePicker(context),
                         ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: TextField(
-                          controller: _input,
-                          focusNode: _inputFocus,
-                          enabled: !isLoading,
-                          minLines: 1,
-                          maxLines: 6,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => _handleSend(),
-                          style: GoogleFonts.dmSans(
-                            fontSize: 15,
-                            color: p.textPrimary,
-                          ),
-                          decoration: InputDecoration(
-                            hintText:
-                                isLoading ? '等待回复中…' : '向 PathPocket 提问',
-                            hintStyle: GoogleFonts.dmSans(
+                        Expanded(
+                          child: TextField(
+                            controller: _input,
+                            focusNode: _inputFocus,
+                            enabled: !isLoading,
+                            minLines: 1,
+                            maxLines: 6,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _handleSend(),
+                            style: GoogleFonts.dmSans(
                               fontSize: 15,
-                              color: p.textTertiary,
+                              color: p.textPrimary,
                             ),
-                            filled: true,
-                            fillColor: p.bgInput,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 11),
-                            border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.bubble),
-                              borderSide: BorderSide(color: p.divider),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.bubble),
-                              borderSide: BorderSide(color: p.divider),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.bubble),
-                              borderSide:
-                                  BorderSide(color: p.primary, width: 1.5),
+                            decoration: InputDecoration(
+                              isCollapsed: true,
+                              hintText:
+                                  isLoading ? '等待回复中…' : '向 PathPocket 提问',
+                              hintStyle: GoogleFonts.dmSans(
+                                fontSize: 15,
+                                color: p.textTertiary,
+                              ),
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 10),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      VoiceInputButton(controller: _input),
-                      const SizedBox(width: 6),
-                      _SendButton(
-                        isLoading: isLoading,
-                        hasText: hasText || pendingImages.isNotEmpty,
-                        onTap: _handleSend,
-                      ),
-                    ],
+                        const SizedBox(width: 2),
+                        // Voice button shows only when there's nothing to send;
+                        // the send button takes its place once there's content.
+                        if (!hasText && pendingImages.isEmpty && !isLoading)
+                          VoiceInputButton(controller: _input)
+                        else
+                          _SendButton(
+                            isLoading: isLoading,
+                            onTap: _handleSend,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 Padding(
@@ -234,11 +215,9 @@ class _InputIcon extends StatelessWidget {
 class _SendButton extends StatefulWidget {
   const _SendButton({
     required this.isLoading,
-    required this.hasText,
     required this.onTap,
   });
   final bool isLoading;
-  final bool hasText;
   final VoidCallback onTap;
 
   @override
@@ -293,7 +272,7 @@ class _SendButtonState extends State<_SendButton>
           width: 38,
           height: 38,
           decoration: BoxDecoration(
-            color: widget.hasText ? color : color.withValues(alpha: 0.35),
+            color: color,
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.arrow_upward, color: Colors.white, size: 18),

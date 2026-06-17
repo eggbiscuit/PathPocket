@@ -73,6 +73,7 @@ dependencies:
 
   # Voice input — Phase 3 (iOS / Android only)
   speech_to_text: ^7.0.0
+  permission_handler: ^11.3.1   # mic permission status + open app settings
 
   # Typography — DM Sans + DM Serif Display
   google_fonts: ^6.2.1
