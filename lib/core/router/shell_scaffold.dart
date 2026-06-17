@@ -130,6 +130,9 @@ class _MobileScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
+      // ChatScreen lifts its own input bar above the keyboard via viewInsets,
+      // so let the body keep full height instead of letting Scaffold resize it.
+      resizeToAvoidBottomInset: false,
       appBar: _MobileAppBar(
         conversationId: conversationId,
         onNewChat: () async {
@@ -166,6 +169,10 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String? conversationId;
   final VoidCallback onNewChat;
 
+  /// Display name shown centered in the app bar. Currently the product name;
+  /// swap this for the active model name once a real backend is wired in.
+  static const String _modelName = 'PathPocket';
+
   @override
   Size get preferredSize => const Size.fromHeight(52);
 
@@ -175,43 +182,41 @@ class _MobileAppBar extends StatelessWidget implements PreferredSizeWidget {
 
     return Container(
       height: preferredSize.height,
-      decoration: BoxDecoration(
-        color: p.bgPage,
-        border: Border(
-          bottom: BorderSide(
-            color: p.divider,
-          ),
-        ),
-      ),
+      color: p.bgPage,
       child: SafeArea(
         bottom: false,
-        child: Row(
-          children: [
-            // Hamburger
-            Builder(
-              builder: (ctx) => IconButton(
-                icon: Icon(Icons.menu, color: p.textSecondary, size: 22),
-                onPressed: () => Scaffold.of(ctx).openDrawer(),
-                tooltip: '会话列表',
-              ),
-            ),
-            // Title
-            Expanded(
-              child: Text(
-                'PathPocket',
-                style: GoogleFonts.dmSerifDisplay(
-                  fontSize: 18,
-                  color: p.textPrimary,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              // Hamburger
+              Builder(
+                builder: (ctx) => IconButton(
+                  icon: Icon(Icons.menu, color: p.textSecondary, size: 22),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  tooltip: '会话列表',
                 ),
               ),
-            ),
-            // New chat quick button
-            IconButton(
-              icon: Icon(Icons.edit_outlined, color: p.textSecondary, size: 20),
-              onPressed: onNewChat,
-              tooltip: '新建对话',
-            ),
-          ],
+              // Centered model name
+              Expanded(
+                child: Text(
+                  _modelName,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.dmSerifDisplay(
+                    fontSize: 18,
+                    color: p.textPrimary,
+                  ),
+                ),
+              ),
+              // New chat quick button
+              IconButton(
+                icon:
+                    Icon(Icons.edit_outlined, color: p.textSecondary, size: 20),
+                onPressed: onNewChat,
+                tooltip: '新建对话',
+              ),
+            ],
+          ),
         ),
       ),
     );

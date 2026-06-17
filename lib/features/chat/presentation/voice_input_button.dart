@@ -38,6 +38,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   final _stt = SpeechToText();
   bool _ready = false;
   bool _listening = false;
+  bool _initializing = false;
   String _partial = '';
 
   @override
@@ -46,11 +47,43 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     if (_speechSupported) _init();
   }
 
-  Future<void> _init() async {
-    final ok = await _stt.initialize(onError: (_) {
-      if (mounted) setState(() => _listening = false);
-    });
+  /// Initializes the engine, requesting mic permission on first use.
+  /// Returns whether the engine is ready to listen.
+  Future<bool> _init() async {
+    if (_ready) return true;
+    if (_initializing) return false;
+    _initializing = true;
+    bool ok = false;
+    try {
+      ok = await _stt.initialize(
+        onError: (err) {
+          if (mounted) setState(() => _listening = false);
+          _notify('语音识别出错：${err.errorMsg}');
+        },
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted && _listening) setState(() => _listening = false);
+          }
+        },
+      );
+    } catch (e) {
+      ok = false;
+    }
+    _initializing = false;
     if (mounted) setState(() => _ready = ok);
+    return ok;
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md)),
+      ));
   }
 
   @override
@@ -60,7 +93,14 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   Future<void> _startListening() async {
-    if (!_ready || _listening) return;
+    if (_listening) return;
+    if (!_ready) {
+      final ok = await _init();
+      if (!ok) {
+        _notify('无法使用语音输入，请在系统设置中授予麦克风权限');
+        return;
+      }
+    }
     setState(() {
       _listening = true;
       _partial = '';
@@ -88,11 +128,14 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   Future<void> _stopListening() async {
     await _stt.stop();
     if (mounted) {
-      if (_partial.isNotEmpty) _commitText(_partial);
+      final hadPartial = _partial.isNotEmpty;
+      if (hadPartial) _commitText(_partial);
+      final committed = hadPartial || widget.controller.text.isNotEmpty;
       setState(() {
         _listening = false;
         _partial = '';
       });
+      if (!committed) _notify('没有识别到语音');
     }
   }
 
@@ -111,14 +154,10 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
 
   Widget _desktopButton() {
     return Tooltip(
-      message: _ready
-          ? (_listening ? '点击停止录音' : '点击开始语音输入')
-          : '麦克风不可用',
+      message: _listening ? '点击停止录音' : '点击开始语音输入',
       child: InkResponse(
         radius: 22,
-        onTap: _ready
-            ? () => _listening ? _stopListening() : _startListening()
-            : null,
+        onTap: () => _listening ? _stopListening() : _startListening(),
         child: _MicIcon(listening: _listening, ready: _ready),
       ),
     );
@@ -131,7 +170,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       onLongPressStart: (_) => _startListening(),
       onLongPressEnd: (_) => _stopListening(),
       child: Tooltip(
-        message: _ready ? '按住说话' : '麦克风不可用',
+        message: '按住说话',
         child: _MicIcon(listening: _listening, ready: _ready),
       ),
     );
@@ -150,7 +189,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
           height: _listening ? 52 : 40,
           decoration: BoxDecoration(
             color: _listening
-                ? AppColors.error.withValues(alpha: 0.15)
+                ? context.palette.error.withValues(alpha: 0.15)
                 : Colors.transparent,
             shape: BoxShape.circle,
           ),
@@ -175,42 +214,6 @@ class _MicIcon extends StatelessWidget {
           ? p.error
           : (ready ? p.primary : p.textTertiary),
       size: 24,
-    );
-  }
-}
-
-/// Compact overlay shown while recording, floating above the input bar.
-class VoiceListeningOverlay extends StatelessWidget {
-  const VoiceListeningOverlay({super.key, required this.partial});
-  final String partial;
-
-  @override
-  Widget build(BuildContext context) {
-    if (partial.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.mic, size: 16, color: AppColors.error),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              partial,
-              style: const TextStyle(fontSize: 13),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

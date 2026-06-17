@@ -71,6 +71,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
     });
 
+    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
+
     return Container(
       color: p.bgPage,
       child: Stack(
@@ -78,20 +80,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // ── Message list ──────────────────────────────────────
           Positioned.fill(
             bottom: 0,
-            child: Column(
-              children: [
-                Expanded(child: _buildList(state)),
-                if (state.isLoading) _buildThinkingBar(p),
-                // Reserve space for the input bar
-                const SizedBox(height: 96),
-              ],
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.translucent,
+              child: Column(
+                children: [
+                  Expanded(child: _buildList(state)),
+                  if (state.isLoading) _buildThinkingBar(p),
+                  // Reserve space for the input bar + keyboard
+                  SizedBox(height: 96 + viewInsets),
+                ],
+              ),
             ),
           ),
-          // ── Floating input bar ────────────────────────────────
+          // ── Floating input bar — lifts above the keyboard ─────
           Positioned(
             left: 0,
             right: 0,
-            bottom: 0,
+            bottom: viewInsets,
             child: ChatInputBar(
               conversationId: widget.conversationId,
               isLoading: state.isLoading,
@@ -101,7 +107,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (_smartScroll.showJumpFab)
             Positioned(
               right: 16,
-              bottom: 110,
+              bottom: 110 + viewInsets,
               child: _JumpFab(onTap: _smartScroll.jumpToBottom),
             ),
         ],

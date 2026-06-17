@@ -43,7 +43,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('选取失败：$e'),
-            backgroundColor: AppColors.error,
+            backgroundColor: context.palette.error,
           ),
         );
         Navigator.pop(context);
@@ -68,15 +68,42 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   @override
   Widget build(BuildContext context) {
     final service = ref.read(imageInputServiceProvider);
+    final p = context.palette;
+
+    final options = _isMobile
+        ? [
+            (
+              icon: Icons.photo_library_outlined,
+              label: '相册',
+              onTap: () => _handle(() => service.pickFromGallery()),
+            ),
+            (
+              icon: Icons.camera_alt_outlined,
+              label: '拍摄',
+              onTap: () => _handle(() => service.pickFromCamera()),
+            ),
+          ]
+        : [
+            (
+              icon: Icons.folder_open_outlined,
+              label: '文件',
+              onTap: () => _handle(() => service.pickFromGallery()),
+            ),
+            (
+              icon: Icons.content_paste_outlined,
+              label: '剪贴板',
+              onTap: () => _handle(() => service.pasteFromClipboard()),
+            ),
+          ];
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: _loading
-            ? const SizedBox(
-                height: 80,
+            ? SizedBox(
+                height: 96,
                 child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
+                  child: CircularProgressIndicator(color: p.primary),
                 ),
               )
             : Column(
@@ -85,40 +112,26 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                   Container(
                     width: 40,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(bottom: 18),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: p.divider,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  if (_isMobile) ...[
-                    _Tile(
-                      icon: Icons.photo_library_outlined,
-                      label: '从相册选择',
-                      onTap: () =>
-                          _handle(() => service.pickFromGallery()),
-                    ),
-                    _Tile(
-                      icon: Icons.camera_alt_outlined,
-                      label: '拍摄照片',
-                      onTap: () =>
-                          _handle(() => service.pickFromCamera()),
-                    ),
-                  ] else ...[
-                    _Tile(
-                      icon: Icons.folder_open_outlined,
-                      label: '从文件选择',
-                      onTap: () =>
-                          _handle(() => service.pickFromGallery()),
-                    ),
-                    _Tile(
-                      icon: Icons.content_paste_outlined,
-                      label: '从剪贴板粘贴',
-                      onTap: () =>
-                          _handle(() => service.pasteFromClipboard()),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      for (final o in options)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: _IconCard(
+                            icon: o.icon,
+                            label: o.label,
+                            onTap: o.onTap,
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
       ),
@@ -126,8 +139,8 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile({
+class _IconCard extends StatelessWidget {
+  const _IconCard({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -138,10 +151,26 @@ class _Tile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.primary),
-      title: Text(label),
+    final p = context.palette;
+    return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: p.primaryContainer,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+            child: Icon(icon, color: p.primary, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: AppTextStyles.caption(context)),
+        ],
+      ),
     );
   }
 }
