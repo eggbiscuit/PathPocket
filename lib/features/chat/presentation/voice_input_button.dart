@@ -41,6 +41,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   bool _ready = false;
   bool _listening = false;
   bool _initializing = false;
+  bool _starting = false;
   String _partial = '';
   OverlayEntry? _overlay;
 
@@ -67,7 +68,11 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
               '(permanent=${err.permanent})');
           if (mounted) setState(() => _listening = false);
           _removeOverlay();
-          _notify('语音识别出错：${err.errorMsg}');
+          // Cancel so the underlying engine fully releases; otherwise web's
+          // SpeechRecognition stays "started" and the next attempt throws
+          // "recognition has already started".
+          _stt.cancel();
+          _notify(_describeError(err.errorMsg));
         },
         onStatus: (status) {
           debugPrint('[voice] onStatus: $status');
@@ -107,6 +112,26 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     return false;
   }
 
+  /// Maps a speech_to_text error code to a human-friendly Chinese message.
+  String _describeError(String code) {
+    // On web, recognition streams audio to the browser's cloud STT service
+    // (Chrome → Google). When that service is unreachable the plugin reports
+    // "network", which is common on networks that can't reach Google.
+    if (code.contains('network')) {
+      return '语音识别服务连接失败：网页端依赖浏览器云端识别，请检查网络或改用 App 端';
+    }
+    if (code.contains('no_match') || code.contains('no match')) {
+      return '没有识别到语音，请靠近麦克风再试一次';
+    }
+    if (code.contains('audio')) {
+      return '麦克风无法录音，请检查设备权限';
+    }
+    if (code.contains('not_available') || code.contains('unavailable')) {
+      return '当前设备/浏览器不支持语音识别';
+    }
+    return '语音识别出错：$code';
+  }
+
   void _notify(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -143,63 +168,87 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   Future<void> _startListening() async {
-    if (_listening) return;
-    final allowed = await _ensurePermission();
-    if (!allowed) return;
-    if (!_ready) {
-      final ok = await _init();
-      if (!ok) {
-        _notify('无法启动语音识别引擎');
-        return;
-      }
-    }
-    setState(() {
-      _listening = true;
-      _partial = '';
-    });
-    _showOverlay();
-
-    // Pick a Chinese locale if installed; otherwise fall back to the device
-    // default. Forcing zh_CN on a device without that pack can make the engine
-    // silently produce no results.
-    String? localeId;
+    // Re-entrancy guard: clicks/long-presses can arrive while a previous
+    // start is still in flight (await gaps below), or while the native engine
+    // is winding down. Without this, web throws
+    // "recognition has already started".
+    if (_listening || _starting) return;
+    _starting = true;
     try {
-      final locales = await _stt.locales();
-      final zh = locales.where((l) => l.localeId.startsWith('zh'));
-      if (zh.isNotEmpty) {
-        localeId = zh.first.localeId;
-      } else {
-        final sys = await _stt.systemLocale();
-        localeId = sys?.localeId;
-      }
-      debugPrint('[voice] using localeId=$localeId '
-          '(available zh: ${zh.map((l) => l.localeId).toList()})');
-    } catch (e) {
-      debugPrint('[voice] locale lookup failed: $e');
-    }
-
-    await _stt.listen(
-      onResult: (r) {
-        debugPrint('[voice] onResult: "${r.recognizedWords}" '
-            'final=${r.finalResult}');
-        if (!mounted) return;
-        final text = r.recognizedWords;
-        if (r.finalResult) {
-          _commitText(text);
-          setState(() => _partial = '');
-        } else {
-          setState(() => _partial = text);
+      final allowed = await _ensurePermission();
+      if (!allowed) return;
+      if (!_ready) {
+        final ok = await _init();
+        if (!ok) {
+          _notify('无法启动语音识别引擎');
+          return;
         }
-        _overlay?.markNeedsBuild();
-      },
-      listenOptions: SpeechListenOptions(
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 4),
-        localeId: localeId,
-        cancelOnError: true,
-        partialResults: true,
-      ),
-    );
+      }
+      // The engine may still be running even though our flag was cleared by a
+      // stray onStatus (web reports notListening before fully stopping). Make
+      // sure it's stopped before we start a fresh session.
+      if (_stt.isListening) {
+        await _stt.stop();
+      }
+      if (!mounted) return;
+      setState(() {
+        _listening = true;
+        _partial = '';
+      });
+      _showOverlay();
+
+      // Pick a Chinese locale if installed; otherwise fall back to the device
+      // default. Forcing zh_CN on a device without that pack can make the
+      // engine silently produce no results.
+      String? localeId;
+      try {
+        final locales = await _stt.locales();
+        final zh = locales.where((l) => l.localeId.startsWith('zh'));
+        if (zh.isNotEmpty) {
+          localeId = zh.first.localeId;
+        } else {
+          final sys = await _stt.systemLocale();
+          localeId = sys?.localeId;
+        }
+        debugPrint('[voice] using localeId=$localeId '
+            '(available zh: ${zh.map((l) => l.localeId).toList()})');
+      } catch (e) {
+        debugPrint('[voice] locale lookup failed: $e');
+      }
+
+      await _stt.listen(
+        onResult: (r) {
+          debugPrint('[voice] onResult: "${r.recognizedWords}" '
+              'final=${r.finalResult}');
+          if (!mounted) return;
+          final text = r.recognizedWords;
+          if (r.finalResult) {
+            _commitText(text);
+            setState(() => _partial = '');
+          } else {
+            setState(() => _partial = text);
+          }
+          _overlay?.markNeedsBuild();
+        },
+        listenOptions: SpeechListenOptions(
+          listenFor: const Duration(seconds: 60),
+          pauseFor: const Duration(seconds: 4),
+          localeId: localeId,
+          cancelOnError: true,
+          partialResults: true,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[voice] startListening failed: $e');
+      _removeOverlay();
+      if (mounted) setState(() => _listening = false);
+      // Reset the engine so a stuck "already started" state recovers and the
+      // next press can start cleanly.
+      _stt.cancel();
+      _notify('无法启动语音识别，请重试');
+    } finally {
+      _starting = false;
+    }
   }
 
   Future<void> _stopListening() async {
