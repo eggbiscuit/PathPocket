@@ -61,18 +61,24 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
     bool ok = false;
     try {
       ok = await _stt.initialize(
+        debugLogging: true,
         onError: (err) {
+          debugPrint('[voice] onError: ${err.errorMsg} '
+              '(permanent=${err.permanent})');
           if (mounted) setState(() => _listening = false);
           _removeOverlay();
           _notify('语音识别出错：${err.errorMsg}');
         },
         onStatus: (status) {
+          debugPrint('[voice] onStatus: $status');
           if (status == 'done' || status == 'notListening') {
             if (mounted && _listening) setState(() => _listening = false);
           }
         },
       );
+      debugPrint('[voice] initialize -> $ok');
     } catch (e) {
+      debugPrint('[voice] initialize threw: $e');
       ok = false;
     }
     _initializing = false;
@@ -152,8 +158,30 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       _partial = '';
     });
     _showOverlay();
+
+    // Pick a Chinese locale if installed; otherwise fall back to the device
+    // default. Forcing zh_CN on a device without that pack can make the engine
+    // silently produce no results.
+    String? localeId;
+    try {
+      final locales = await _stt.locales();
+      final zh = locales.where((l) => l.localeId.startsWith('zh'));
+      if (zh.isNotEmpty) {
+        localeId = zh.first.localeId;
+      } else {
+        final sys = await _stt.systemLocale();
+        localeId = sys?.localeId;
+      }
+      debugPrint('[voice] using localeId=$localeId '
+          '(available zh: ${zh.map((l) => l.localeId).toList()})');
+    } catch (e) {
+      debugPrint('[voice] locale lookup failed: $e');
+    }
+
     await _stt.listen(
       onResult: (r) {
+        debugPrint('[voice] onResult: "${r.recognizedWords}" '
+            'final=${r.finalResult}');
         if (!mounted) return;
         final text = r.recognizedWords;
         if (r.finalResult) {
@@ -167,8 +195,9 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       listenOptions: SpeechListenOptions(
         listenFor: const Duration(seconds: 60),
         pauseFor: const Duration(seconds: 4),
-        localeId: 'zh_CN',
+        localeId: localeId,
         cancelOnError: true,
+        partialResults: true,
       ),
     );
   }
