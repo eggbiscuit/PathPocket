@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme.dart';
@@ -412,7 +413,7 @@ class _Footer extends ConsumerWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              user.displayName ?? user.phone,
+              user.displayName ?? user.email,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.dmSans(
@@ -421,6 +422,16 @@ class _Footer extends ConsumerWidget {
               ),
             ),
           ),
+          if (user.isAdmin)
+            IconButton(
+              tooltip: '用户审批',
+              icon: Icon(
+                Icons.admin_panel_settings_outlined,
+                size: 17,
+                color: p.primary,
+              ),
+              onPressed: () => context.go('/admin'),
+            ),
           IconButton(
             tooltip: '设置',
             icon: Icon(

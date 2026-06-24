@@ -9,8 +9,11 @@ part 'app_database.g.dart';
 /// rows in other tables can be filtered with a single foreign key.
 class Users extends Table {
   TextColumn get id => text()();
-  TextColumn get phone => text()();
+  TextColumn get email => text()();
   TextColumn get displayName => text().nullable()();
+  // Cached from the backend; used to gate the admin panel UI locally.
+  TextColumn get role => text().withDefault(const Constant('user'))();
+  TextColumn get status => text().withDefault(const Constant('approved'))();
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
 
@@ -89,7 +92,25 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v1→v2: rename phone→email; add role, status columns.
+            await m.addColumn(users, users.email);
+            await m.addColumn(users, users.role);
+            await m.addColumn(users, users.status);
+            // Back-fill email from old phone column (best-effort; real users
+            // will re-login and overwrite via upsertUser).
+            await customStatement(
+              'UPDATE users SET email = phone WHERE email IS NULL OR email = \'\'',
+            );
+          }
+        },
+      );
 
   // ---- Users ----
 

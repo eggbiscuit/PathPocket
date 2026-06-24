@@ -1,3 +1,4 @@
+const String backendBaseUrl = 'http://localhost:8000'; // PathPocket FastAPI backend
 const String apiEndpoint = 'https://api.openai.com/v1/chat/completions';
 const String apiKey = 'YOUR_API_KEY'; // replace with your OpenAI key
 const String model = 'gpt-4o';
