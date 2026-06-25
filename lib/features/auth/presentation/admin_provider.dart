@@ -60,7 +60,9 @@ class AdminPanelNotifier extends Notifier<AdminPanelState> {
   @override
   AdminPanelState build() {
     // Load all users (not just pending) so admins can see the full picture.
-    _load();
+    // Deferred so the first `state` read happens after build() returns —
+    // reading state synchronously inside build() throws "uninitialized provider".
+    Future.microtask(_load);
     return const AdminPanelState(isLoading: true);
   }
 
