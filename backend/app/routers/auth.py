@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_session
-from ..email import send_verification_email
+from ..email import send_admin_notification, send_verification_email
 from ..errors import app_error
 from ..models import User, UserStatus
 from ..schemas import (
@@ -47,6 +47,7 @@ async def register(body: RegisterIn, session: AsyncSession = Depends(get_session
     await session.refresh(user)
 
     send_verification_email(user.email, create_verify_token(user.id))
+    send_admin_notification(user.email)
 
     return RegisterOut(
         message="注册成功，请查收验证邮件，并等待管理员审批。",
