@@ -55,3 +55,4 @@ lib/core/config.dart
 # Internal product docs — not for public repo
 病理问答助手.md
 CLAUDE.md
+.venv/

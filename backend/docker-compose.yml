@@ -27,6 +27,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin-password}
       BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:8000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      CORS_ORIGIN_REGEX: ${CORS_ORIGIN_REGEX:-}
     ports:
       - "8000:8000"
 
