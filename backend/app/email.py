@@ -1,13 +1,27 @@
+import logging
 import smtplib
 from email.message import EmailMessage
 
 from .config import get_settings
 
 _settings = get_settings()
+_log = logging.getLogger("pathpocket.email")
 
 
 def _verification_link(token: str) -> str:
     return f"{_settings.backend_base_url}/auth/verify-email?token={token}"
+
+
+def _send(msg: EmailMessage) -> None:
+    """Sends a message via SMTP; logs a warning and returns (never raises) on failure."""
+    try:
+        with smtplib.SMTP(_settings.smtp_host, _settings.smtp_port) as smtp:
+            smtp.starttls()
+            if _settings.smtp_user:
+                smtp.login(_settings.smtp_user, _settings.smtp_password)
+            smtp.send_message(msg)
+    except Exception as exc:
+        _log.warning("Failed to send email to %s: %s", msg["To"], exc)
 
 
 def send_admin_notification(new_user_email: str) -> None:
@@ -32,11 +46,7 @@ def send_admin_notification(new_user_email: str) -> None:
         f"请登录管理面板审批：{review_url}\n"
     )
 
-    with smtplib.SMTP(_settings.smtp_host, _settings.smtp_port) as smtp:
-        smtp.starttls()
-        if _settings.smtp_user:
-            smtp.login(_settings.smtp_user, _settings.smtp_password)
-        smtp.send_message(msg)
+    _send(msg)
 
 
 def send_verification_email(to_email: str, token: str) -> None:
@@ -61,8 +71,4 @@ def send_verification_email(to_email: str, token: str) -> None:
         "验证后还需等待管理员审批，审批通过即可登录。"
     )
 
-    with smtplib.SMTP(_settings.smtp_host, _settings.smtp_port) as smtp:
-        smtp.starttls()
-        if _settings.smtp_user:
-            smtp.login(_settings.smtp_user, _settings.smtp_password)
-        smtp.send_message(msg)
+    _send(msg)
