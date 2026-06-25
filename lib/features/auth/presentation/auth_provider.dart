@@ -39,7 +39,7 @@ void Function() registerLogoutHook(Ref ref, LogoutHook hook) =>
     ref.read(_logoutHookRegistryProvider).register(hook);
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository();
+  return RemoteAuthRepository();
 });
 
 /// What's blocking login after a valid credential submission.

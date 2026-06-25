@@ -1,4 +1,9 @@
-const String backendBaseUrl = 'http://localhost:8000'; // PathPocket FastAPI backend
+// PathPocket FastAPI backend. Override at build time, e.g.
+// --dart-define=BACKEND_BASE_URL=https://your-host
+const String backendBaseUrl = String.fromEnvironment(
+  'BACKEND_BASE_URL',
+  defaultValue: 'http://localhost:8000',
+);
 const String apiEndpoint = 'https://api.openai.com/v1/chat/completions';
 const String apiKey = 'YOUR_API_KEY'; // replace with your OpenAI key
 const String model = 'gpt-4o';

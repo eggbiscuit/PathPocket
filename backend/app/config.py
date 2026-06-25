@@ -20,6 +20,8 @@ class Settings(BaseSettings):
 
     backend_base_url: str = "http://localhost:8000"
     cors_origins: str = "http://localhost:8080,http://localhost:3000"
+    # Optional regex for dynamic origins (e.g. ngrok subdomains). Empty disables it.
+    cors_origin_regex: str = ""
 
     smtp_host: str = ""
     smtp_port: int = 587
@@ -30,6 +32,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def jwt_secret_is_default(self) -> bool:
+        return self.jwt_secret == "change-me-to-a-long-random-secret"
 
 
 @lru_cache
