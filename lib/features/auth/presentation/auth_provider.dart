@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config.dart' as config;
 import '../../../core/platform/tab_sync.dart';
 import '../../../core/storage/app_database.dart' as db;
 import '../../../core/storage/app_database.dart' show AppDatabase, databaseProvider;
@@ -39,7 +40,7 @@ void Function() registerLogoutHook(Ref ref, LogoutHook hook) =>
     ref.read(_logoutHookRegistryProvider).register(hook);
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return RemoteAuthRepository();
+  return config.useMock ? MockAuthRepository() : RemoteAuthRepository();
 });
 
 /// What's blocking login after a valid credential submission.
