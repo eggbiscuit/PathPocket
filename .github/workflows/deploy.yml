@@ -37,8 +37,8 @@ jobs:
       - name: Generate Drift code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Build web
-        run: flutter build web --release --base-href /PathPocket/
+      - name: Build web (mock demo — fully client-side, no backend)
+        run: flutter build web --release --base-href /PathPocket/ --dart-define=USE_MOCK=true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

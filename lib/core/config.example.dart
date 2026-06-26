@@ -1,3 +1,7 @@
+// Demo build switch: --dart-define=USE_MOCK=true runs fully client-side
+// (mock auth + chat), no backend needed — used for the GitHub Pages showcase.
+const bool useMock = bool.fromEnvironment('USE_MOCK', defaultValue: false);
+
 // PathPocket FastAPI backend. Override at build time, e.g.
 // --dart-define=BACKEND_BASE_URL=https://your-host
 const String backendBaseUrl = String.fromEnvironment(
