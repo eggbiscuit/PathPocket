@@ -75,7 +75,10 @@ class AdminPanelNotifier extends Notifier<AdminPanelState> {
       final token = await _token();
       final resp = await Dio().get(
         '${config.backendBaseUrl}/admin/users',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        }),
       );
       final users = (resp.data as List)
           .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
@@ -101,7 +104,10 @@ class AdminPanelNotifier extends Notifier<AdminPanelState> {
       final token = await _token();
       final resp = await Dio().post(
         '${config.backendBaseUrl}/admin/users/$userId/$action',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        }),
       );
       final updated = AdminUser.fromJson(resp.data as Map<String, dynamic>);
       state = state.copyWith(

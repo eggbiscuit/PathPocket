@@ -13,10 +13,23 @@ def _verification_link(token: str) -> str:
 
 
 def _send(msg: EmailMessage) -> None:
-    """Sends a message via SMTP; logs a warning and returns (never raises) on failure."""
+    """Sends a message via SMTP; logs a warning and returns (never raises) on failure.
+
+    Port 465 uses implicit TLS (SMTP_SSL); any other port uses STARTTLS. On
+    Docker Desktop for Mac the NAT often stalls the 587 STARTTLS handshake, so
+    465 is the reliable choice there.
+    """
     try:
-        with smtplib.SMTP(_settings.smtp_host, _settings.smtp_port) as smtp:
+        if _settings.smtp_port == 465:
+            smtp = smtplib.SMTP_SSL(
+                _settings.smtp_host, _settings.smtp_port, timeout=15
+            )
+        else:
+            smtp = smtplib.SMTP(
+                _settings.smtp_host, _settings.smtp_port, timeout=15
+            )
             smtp.starttls()
+        with smtp:
             if _settings.smtp_user:
                 smtp.login(_settings.smtp_user, _settings.smtp_password)
             smtp.send_message(msg)
