@@ -36,6 +36,9 @@ async def _seed_admin() -> None:
             existing.role = UserRole.admin
             existing.status = UserStatus.approved
             existing.email_verified = True
+            # Make ADMIN_PASSWORD authoritative even when the admin email was
+            # already a registered user, so the .env password always works.
+            existing.password_hash = hash_password(settings.admin_password)
         await session.commit()
 
 

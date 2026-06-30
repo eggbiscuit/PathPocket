@@ -137,6 +137,10 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, registerSuccess: true);
     } on AuthException catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.message);
+    } catch (e) {
+      // Any non-AuthException must still clear the spinner, else the button
+      // hangs forever. Surface the error so the cause is visible.
+      state = state.copyWith(isLoading: false, errorMessage: '注册失败：$e');
     }
   }
 
@@ -165,6 +169,10 @@ class AuthNotifier extends Notifier<AuthState> {
         errorMessage: e.message,
         blocker: blocker,
       );
+    } catch (e) {
+      // Any non-AuthException must still clear the spinner, else the button
+      // hangs forever. Surface the error so the cause is visible.
+      state = state.copyWith(isLoading: false, errorMessage: '登录失败：$e');
     }
   }
 

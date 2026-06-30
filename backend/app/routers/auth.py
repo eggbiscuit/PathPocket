@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +30,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=RegisterOut, status_code=201)
-async def register(body: RegisterIn, session: AsyncSession = Depends(get_session)):
+async def register(
+    body: RegisterIn,
+    background: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+):
     existing = await get_user_by_email(session, body.email)
     if existing is not None:
         raise app_error(409, "EMAIL_EXISTS", "该邮箱已注册")
@@ -46,8 +50,13 @@ async def register(body: RegisterIn, session: AsyncSession = Depends(get_session
     await session.commit()
     await session.refresh(user)
 
-    send_verification_email(user.email, create_verify_token(user.id))
-    send_admin_notification(user.email)
+    # Send emails after the response is returned. smtplib is blocking and the
+    # SMTP server can hang on the TLS handshake; doing it inline would stall the
+    # request past the client timeout and spin the register button forever.
+    background.add_task(
+        send_verification_email, user.email, create_verify_token(user.id)
+    )
+    background.add_task(send_admin_notification, user.email)
 
     return RegisterOut(
         message="注册成功，请查收验证邮件，并等待管理员审批。",

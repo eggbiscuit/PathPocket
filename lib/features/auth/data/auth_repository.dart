@@ -28,7 +28,13 @@ abstract class AuthRepository {
 
 /// Remote implementation backed by the PathPocket FastAPI backend.
 class RemoteAuthRepository implements AuthRepository {
-  RemoteAuthRepository({Dio? dio}) : _dio = dio ?? Dio();
+  RemoteAuthRepository({Dio? dio})
+      : _dio = dio ??
+            Dio(BaseOptions(
+              // Bypass ngrok's free-tier "Visit Site" interstitial, which
+              // otherwise returns HTML instead of proxying to the backend.
+              headers: {'ngrok-skip-browser-warning': 'true'},
+            ));
 
   final Dio _dio;
 

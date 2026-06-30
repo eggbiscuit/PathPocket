@@ -92,7 +92,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -100,7 +100,13 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             // v1→v2: rename phone→email; add role, status columns.
-            await m.addColumn(users, users.email);
+            // `email` is NOT NULL with no Dart-side default, so addColumn would
+            // emit `ADD COLUMN email TEXT NOT NULL`, which SQLite rejects on a
+            // table that already has rows. Add it with a SQL default instead,
+            // then back-fill from the old phone column below.
+            await customStatement(
+              "ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''",
+            );
             await m.addColumn(users, users.role);
             await m.addColumn(users, users.status);
             // Back-fill email from old phone column (best-effort; real users
@@ -108,6 +114,13 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
               'UPDATE users SET email = phone WHERE email IS NULL OR email = \'\'',
             );
+          }
+          if (from < 3) {
+            // v2→v3: drop the legacy NOT NULL `phone` column left over from v1.
+            // It was never removed in v1→v2, so upsertUser (which omits phone)
+            // hit a NOT NULL constraint. Recreate the table from the current
+            // schema, which carries over data and drops phone.
+            await m.alterTable(TableMigration(users));
           }
         },
       );
