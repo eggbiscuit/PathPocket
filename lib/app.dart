@@ -15,20 +15,27 @@ class PathPocketApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final fontScale = ref.watch(fontScaleProvider);
 
-    final baseMediaQuery = MediaQueryData.fromView(View.of(context));
-    final systemScale = baseMediaQuery.textScaler.scale(1.0);
-
-    return MediaQuery(
-      data: baseMediaQuery.copyWith(
-        textScaler: TextScaler.linear(systemScale * fontScale),
-      ),
-      child: MaterialApp.router(
-        title: 'PathPocket',
-        theme: buildAppTheme(),
-        darkTheme: buildDarkTheme(),
-        themeMode: themeMode,
-        routerConfig: router,
-      ),
+    return MaterialApp.router(
+      title: 'PathPocket',
+      theme: buildAppTheme(),
+      darkTheme: buildDarkTheme(),
+      themeMode: themeMode,
+      routerConfig: router,
+      // Apply the user's font scale on top of the inherited MediaQuery, which
+      // MaterialApp builds reactively from the view. Rebuilding MediaQuery from
+      // View.of(context) at the app root instead would drop the status-bar
+      // padding (View.of doesn't subscribe to metrics changes, so SafeArea saw
+      // a stale/zero top inset and the app bar collided with the status bar).
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        final systemScale = mq.textScaler.scale(1.0);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(systemScale * fontScale),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
