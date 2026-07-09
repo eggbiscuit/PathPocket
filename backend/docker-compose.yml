@@ -33,8 +33,12 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-PathPocket <no-reply@pathpocket.dev>}
+      WSI_STORAGE_DIR: /data/wsi
     ports:
       - "8000:8000"
+    volumes:
+      - wsi_data:/data/wsi
 
 volumes:
   pgdata:
+  wsi_data:

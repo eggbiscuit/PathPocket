@@ -7,6 +7,8 @@ import '../../features/auth/presentation/auth_provider.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/pending_approval_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/wsi/presentation/wsi_home_page.dart';
+import '../../features/wsi/presentation/wsi_viewer_page.dart';
 import 'shell_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -35,6 +37,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/pending', builder: (_, __) => const PendingApprovalScreen()),
       GoRoute(path: '/admin', builder: (_, __) => const AdminPanelScreen()),
+      GoRoute(path: '/wsi', builder: (_, __) => const WsiHomePage()),
+      GoRoute(
+        path: '/wsi/view/:id',
+        builder: (_, s) => WsiViewerPage(slideId: s.pathParameters['id']!),
+      ),
       GoRoute(path: '/', builder: (_, __) => const ShellScaffold()),
     ],
   );

@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "PathPocket <no-reply@pathpocket.dev>"
 
+    # WSI (whole-slide image) storage + tiling.
+    wsi_storage_dir: str = "/data/wsi"
+    wsi_max_upload_bytes: int = 2 * 1024**3  # 2 GiB hard cap
+    wsi_tile_size: int = 254  # 254 + 2*overlap = 256px effective tiles
+    wsi_tile_overlap: int = 1
+    wsi_cache_size: int = 6  # max concurrently-open OpenSlide handles
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
