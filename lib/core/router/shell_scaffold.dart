@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../features/chat/presentation/chat_provider.dart';
@@ -56,7 +57,13 @@ class _DesktopScaffoldState extends State<_DesktopScaffold> {
             width: _sidebarWidth,
             child: Container(
               color: p.bgSidebar,
-              child: const ConversationsList(),
+              child: Column(
+                children: [
+                  const Expanded(child: ConversationsList()),
+                  const Divider(height: 1),
+                  _WsiNavTile(onTap: () => context.go('/wsi')),
+                ],
+              ),
             ),
           ),
 
@@ -121,6 +128,22 @@ class _ResizeHandleState extends State<_ResizeHandle> {
   }
 }
 
+class _WsiNavTile extends StatelessWidget {
+  const _WsiNavTile({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return ListTile(
+      leading: Icon(Icons.biotech_outlined, color: p.textSecondary, size: 22),
+      title: Text('全切片图像',
+          style: TextStyle(color: p.textPrimary, fontSize: 14)),
+      onTap: onTap,
+    );
+  }
+}
+
 // ── Mobile Layout ─────────────────────────────────────────────────────────────
 
 class _MobileScaffold extends ConsumerWidget {
@@ -141,8 +164,21 @@ class _MobileScaffold extends ConsumerWidget {
       // so keep the body at full height here.
       resizeToAvoidBottomInset: false,
       drawer: Drawer(
-        child: ConversationsList(
-          onSelect: () => Navigator.of(context).pop(),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ConversationsList(
+                  onSelect: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const Divider(height: 1),
+              _WsiNavTile(onTap: () {
+                Navigator.of(context).pop();
+                context.go('/wsi');
+              }),
+            ],
+          ),
         ),
       ),
       // The top bar lives inside the body (not the appBar slot) wrapped in a

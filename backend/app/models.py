@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, String
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
@@ -19,8 +19,18 @@ class UserStatus(str, enum.Enum):
     rejected = "rejected"
 
 
+class SlideStatus(str, enum.Enum):
+    uploading = "uploading"  # bytes still streaming to disk
+    ready = "ready"          # OpenSlide opened OK, previewable
+    failed = "failed"        # unreadable / unsupported
+
+
 def _uuid() -> str:
     return f"u_{uuid.uuid4().hex}"
+
+
+def _slide_uuid() -> str:
+    return f"s_{uuid.uuid4().hex}"
 
 
 def _now() -> datetime:
@@ -53,4 +63,27 @@ class User(Base):
     )
     approved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+
+class Slide(Base):
+    __tablename__ = "slides"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_slide_uuid)
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    original_filename: Mapped[str] = mapped_column(String, nullable=False)
+    stored_path: Mapped[str] = mapped_column(String, nullable=False)
+    # OpenSlide's detected vendor format, e.g. "aperio" / "generic-tiff".
+    fmt: Mapped[str] = mapped_column(String, nullable=False)
+    file_size: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    status: Mapped[SlideStatus] = mapped_column(
+        Enum(SlideStatus), default=SlideStatus.uploading, nullable=False
+    )
+    # Level-0 pixel dimensions, cached so the list/viewer needn't reopen the slide.
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, nullable=False
     )

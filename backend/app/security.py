@@ -72,6 +72,19 @@ def decode_token(token: str, expected_typ: str) -> str:
     return sub
 
 
+async def get_current_user_id(
+    token: str | None = Depends(oauth2_scheme),
+) -> str:
+    """Validates the access token and returns the user id — no DB load.
+
+    Used by the high-frequency WSI tile endpoints, where hundreds of GETs per
+    pan/zoom session would otherwise each trigger a `session.get(User)`.
+    """
+    if not token:
+        raise app_error(401, "NOT_AUTHENTICATED", "请先登录")
+    return decode_token(token, ACCESS)
+
+
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
     session: AsyncSession = Depends(get_session),

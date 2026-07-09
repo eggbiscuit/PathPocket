@@ -9,7 +9,14 @@ passlib==1.7.4
 bcrypt==4.0.1
 python-jose[cryptography]==3.3.0
 python-multipart==0.0.20
+# WSI tiling. openslide-bin bundles the prebuilt native OpenSlide library, so we
+# don't have to apt-get a matching libopenslide into the image.
+openslide-python==1.4.1
+openslide-bin==4.0.0.6
+Pillow==11.1.0
 # test
 httpx==0.28.1
 pytest==8.3.4
 pytest-asyncio==0.25.2
+tifffile==2025.1.10
+numpy==2.2.1

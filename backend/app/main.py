@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -10,7 +11,7 @@ logger = logging.getLogger("pathpocket")
 from .config import get_settings
 from .database import SessionLocal, create_all
 from .models import User, UserRole, UserStatus
-from .routers import admin, auth
+from .routers import admin, auth, wsi
 from .security import get_user_by_email, hash_password
 
 settings = get_settings()
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI):
         )
     await create_all()
     await _seed_admin()
+    os.makedirs(settings.wsi_storage_dir, exist_ok=True)
     yield
 
 
@@ -64,6 +66,9 @@ _cors: dict = {
     "allow_credentials": True,
     "allow_methods": ["*"],
     "allow_headers": ["*"],
+    # WSI tiles carry an Authorization header, so each tile URL triggers a
+    # preflight OPTIONS. Cache preflights to cut per-tile latency.
+    "max_age": 3600,
 }
 if settings.cors_origin_regex:
     _cors["allow_origin_regex"] = settings.cors_origin_regex
@@ -71,6 +76,7 @@ app.add_middleware(CORSMiddleware, **_cors)
 
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(wsi.router)
 
 
 @app.get("/health", tags=["meta"])

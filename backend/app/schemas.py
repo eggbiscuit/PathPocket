@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .models import UserRole, UserStatus
+from .models import SlideStatus, UserRole, UserStatus
 
 
 class RegisterIn(BaseModel):
@@ -43,3 +43,16 @@ class TokenOut(BaseModel):
 class RegisterOut(BaseModel):
     message: str
     user: UserOut
+
+
+class SlideOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    original_filename: str
+    fmt: str
+    file_size: int
+    status: SlideStatus
+    width: int | None
+    height: int | None
+    created_at: datetime
