@@ -13,7 +13,7 @@ class WsiHomePage extends ConsumerWidget {
   Future<void> _pickAndUpload(WidgetRef ref) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['svs', 'tiff', 'tif'],
+      allowedExtensions: const ['svs', 'tiff', 'tif', 'sdpc'],
       withData: true,
     );
     if (result == null || result.files.isEmpty) return;
@@ -103,7 +103,7 @@ class _UploadBar extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '支持 .svs / .tiff 格式，上传后可平移缩放预览。',
+                  '支持 .svs / .tiff / .sdpc 格式，上传后可平移缩放预览。',
                   style: TextStyle(color: p.textSecondary, fontSize: 13),
                 ),
               ),
