@@ -1,25 +1,26 @@
 import io
 import os
 
-import openslide
 from fastapi import APIRouter, Depends, File, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from .. import slide_backend, wsi_cache
 from ..config import get_settings
 from ..database import get_session
 from ..errors import app_error
 from ..models import Slide, SlideStatus, User
 from ..schemas import SlideOut
 from ..security import get_current_user, get_current_user_id
-from .. import wsi_cache
 
 router = APIRouter(prefix="/wsi", tags=["wsi"])
 _settings = get_settings()
 
-_ALLOWED_EXT = {".svs", ".tiff", ".tif"}
-_VENDOR_EXT = {".kfb": "江丰 KFBIO", ".sdpc": "生强 Sqray"}
+# .kfb (江丰) has no open reader yet; .sdpc (生强) needs the opensdpc native lib,
+# which is x86_64-only — accepted only when that backend loaded successfully.
+_KFB_EXT = ".kfb"
+_SDPC_EXT = ".sdpc"
 
 
 async def _owned_slide(session: AsyncSession, slide_id: str, user_id: str) -> Slide:
@@ -31,15 +32,6 @@ async def _owned_slide(session: AsyncSession, slide_id: str, user_id: str) -> Sl
     return slide
 
 
-def _probe(path: str) -> tuple[str, tuple[int, int]]:
-    """Detect format + read level-0 dimensions. Blocking — run in threadpool."""
-    fmt = openslide.OpenSlide.detect_format(path)
-    if fmt is None:
-        raise ValueError("openslide cannot read this file")
-    with openslide.OpenSlide(path) as s:
-        return fmt, s.dimensions
-
-
 @router.post("/slides", response_model=SlideOut, status_code=201)
 async def upload_slide(
     file: UploadFile = File(...),
@@ -48,14 +40,20 @@ async def upload_slide(
 ):
     name = file.filename or "upload"
     ext = os.path.splitext(name)[1].lower()
-    if ext in _VENDOR_EXT:
+    if ext == _KFB_EXT:
         raise app_error(
             415,
             "UNSUPPORTED_FORMAT",
-            f"{_VENDOR_EXT[ext]} 格式（{ext}）暂不支持，后续将通过转码支持。当前请上传 .svs 或 .tiff。",
+            "江丰 KFBIO 格式（.kfb）暂不支持，后续将通过转码支持。当前请上传 .svs / .tiff / .sdpc。",
         )
-    if ext not in _ALLOWED_EXT:
-        raise app_error(415, "UNSUPPORTED_FORMAT", "仅支持 .svs / .tiff 格式")
+    if ext == _SDPC_EXT and not slide_backend.sdpc_available():
+        raise app_error(
+            415,
+            "UNSUPPORTED_FORMAT",
+            "当前服务未启用 .sdpc 支持（需 x86_64 环境）。请上传 .svs / .tiff。",
+        )
+    if not slide_backend.can_open(ext):
+        raise app_error(415, "UNSUPPORTED_FORMAT", "不支持的切片格式")
 
     slide = Slide(
         user_id=user.id,
@@ -85,7 +83,7 @@ async def upload_slide(
             out.write(chunk)
 
     try:
-        fmt, (w, h) = await run_in_threadpool(_probe, path)
+        fmt, (w, h) = await run_in_threadpool(slide_backend.probe, path)
     except Exception:
         slide.status = SlideStatus.failed
         await session.commit()
@@ -177,11 +175,14 @@ async def slide_thumbnail(
     slide = await _owned_slide(session, slide_id, user_id)
 
     def _thumb() -> bytes:
-        with openslide.OpenSlide(slide.stored_path) as s:
+        s = slide_backend.open_slide(slide.stored_path)
+        try:
             img = s.get_thumbnail((256, 256))
             buf = io.BytesIO()
             img.convert("RGB").save(buf, "jpeg", quality=80)
             return buf.getvalue()
+        finally:
+            s.close()
 
     data = await run_in_threadpool(_thumb)
     return Response(

@@ -57,6 +57,24 @@ async def test_reject_vendor_format(client):
 
 
 @pytest.mark.asyncio
+async def test_sdpc_rejected_when_backend_unavailable(client):
+    """Where the sdpc native lib isn't installed (e.g. arm dev/CI), uploading a
+    .sdpc must be refused cleanly rather than 500."""
+    from app import slide_backend
+
+    if slide_backend.sdpc_available():
+        pytest.skip("sdpc backend present; rejection path not exercised")
+    token = await admin_token(client)
+    resp = await client.post(
+        "/wsi/slides",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.sdpc", b"not-a-real-slide", "application/octet-stream")},
+    )
+    assert resp.status_code == 415
+    assert resp.json()["detail"]["code"] == "UNSUPPORTED_FORMAT"
+
+
+@pytest.mark.asyncio
 async def test_dzi_and_tile(client):
     token = await admin_token(client)
     slide = await _upload(client, token)

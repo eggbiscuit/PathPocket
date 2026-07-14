@@ -9,9 +9,9 @@ thread-safe per handle, so one cached handle can serve concurrent tile reads.
 import threading
 from collections import OrderedDict
 
-import openslide
 from openslide.deepzoom import DeepZoomGenerator
 
+from . import slide_backend
 from .config import get_settings
 
 _settings = get_settings()
@@ -20,7 +20,7 @@ _settings = get_settings()
 class CacheEntry:
     __slots__ = ("slide", "dzg", "owner_id")
 
-    def __init__(self, slide: openslide.OpenSlide, dzg: DeepZoomGenerator, owner_id: str):
+    def __init__(self, slide, dzg: DeepZoomGenerator, owner_id: str):
         self.slide = slide
         self.dzg = dzg
         self.owner_id = owner_id
@@ -46,7 +46,7 @@ def get_entry(slide_id: str, path: str, owner_id: str) -> CacheEntry:
     if hit is not None:
         return hit
     # Open outside the lock (slow); tolerate a rare double-open race.
-    slide = openslide.OpenSlide(path)
+    slide = slide_backend.open_slide(path)
     dzg = DeepZoomGenerator(
         slide,
         tile_size=_settings.wsi_tile_size,

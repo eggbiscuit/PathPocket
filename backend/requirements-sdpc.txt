@@ -1,0 +1,10 @@
+# Sqray .sdpc reader — x86_64 only (bundles an x86_64 native lib). Installed only
+# when the image is built with --build-arg ENABLE_SDPC=1.
+#
+# opensdpc declares `opencv-python` (the GUI build, which needs X11 libs) as a
+# dependency. We install it with --no-deps in the Dockerfile and provide its real
+# runtime deps here, substituting opencv-python-headless to avoid X11.
+numpy
+Pillow
+opencv-python-headless==4.11.0.86
+opensdpc==1.0.0
