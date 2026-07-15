@@ -45,12 +45,12 @@ async def test_upload_probes_and_marks_ready(client):
 
 
 @pytest.mark.asyncio
-async def test_reject_vendor_format(client):
+async def test_reject_unknown_format(client):
     token = await admin_token(client)
     resp = await client.post(
         "/wsi/slides",
         headers={"Authorization": f"Bearer {token}"},
-        files={"file": ("scan.kfb", b"not-a-real-slide", "application/octet-stream")},
+        files={"file": ("scan.xyz", b"not-a-real-slide", "application/octet-stream")},
     )
     assert resp.status_code == 415
     assert resp.json()["detail"]["code"] == "UNSUPPORTED_FORMAT"
@@ -69,6 +69,24 @@ async def test_sdpc_rejected_when_backend_unavailable(client):
         "/wsi/slides",
         headers={"Authorization": f"Bearer {token}"},
         files={"file": ("scan.sdpc", b"not-a-real-slide", "application/octet-stream")},
+    )
+    assert resp.status_code == 415
+    assert resp.json()["detail"]["code"] == "UNSUPPORTED_FORMAT"
+
+
+@pytest.mark.asyncio
+async def test_kfb_rejected_when_backend_unavailable(client):
+    """Where the kfb native lib isn't installed (e.g. arm dev/CI), uploading a
+    .kfb must be refused cleanly rather than 500."""
+    from app import slide_backend
+
+    if slide_backend.kfb_available():
+        pytest.skip("kfb backend present; rejection path not exercised")
+    token = await admin_token(client)
+    resp = await client.post(
+        "/wsi/slides",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("scan.kfb", b"not-a-real-slide", "application/octet-stream")},
     )
     assert resp.status_code == 415
     assert resp.json()["detail"]["code"] == "UNSUPPORTED_FORMAT"

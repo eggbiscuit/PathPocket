@@ -1,0 +1,6 @@
+# KFBIO .kfb reader via ASlide — x86_64 only (bundles x86_64 native libs).
+# Installed only when the image is built with --build-arg ENABLE_KFB=1.
+#
+# ASlide pins numpy<2 and pulls openslide/tifffile/etc. as declared deps; that's
+# fine in this optional production image. Installed from git (no PyPI release).
+Aslide @ git+https://github.com/MrPeterJin/ASlide.git
