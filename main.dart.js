@@ -123383,7 +123383,7 @@ A.aXb.prototype={
 $2(a,b){return new A.G9(J.n(this.a.c,b),null)},
 $S:797}
 A.aeZ.prototype={
-M(a){var s=null,r=t.W.a(A.W(a).c.i(0,A.au(t.R))),q=A.hu(A.aU("\u652f\u6301 .svs / .tiff / .sdpc \u683c\u5f0f\uff0c\u4e0a\u4f20\u540e\u53ef\u5e73\u79fb\u7f29\u653e\u9884\u89c8\u3002",s,s,s,A.fC(s,s,r.z,s,s,s,s,s,s,s,s,13,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),1),p=this.c,o=p.a,n=o?s:this.d,m=t.D
+M(a){var s=null,r=t.W.a(A.W(a).c.i(0,A.au(t.R))),q=A.hu(A.aU("\u652f\u6301 .svs / .tiff / .sdpc / .kfb \u683c\u5f0f\uff0c\u4e0a\u4f20\u540e\u53ef\u5e73\u79fb\u7f29\u653e\u9884\u89c8\u3002",s,s,s,A.fC(s,s,r.z,s,s,s,s,s,s,s,s,13,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s),1),p=this.c,o=p.a,n=o?s:this.d,m=t.D
 n=A.b([A.er(A.b([q,B.nU,A.bo8(B.Oh,A.aU(o?"\u4e0a\u4f20\u4e2d\u2026":"\u4e0a\u4f20\u5207\u7247",s,s,s,s,s,s),n)],m),B.O,B.y,B.J,s)],m)
 if(o){q=p.b
 B.c.R(n,A.b([B.e4,A.At(A.cl(4),new A.KG(q,s,s,s,s,s,s)),B.ED,A.aU(B.d.aC(q*100,0)+"%",s,s,s,A.fC(s,s,r.Q,s,s,s,s,s,s,s,s,12,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s)],m))}q=p.c
@@ -134364,7 +134364,6 @@ B.nY=new A.yt(1,"deleteOrUpdate")
 B.ET=new A.yt(2,"insert")
 B.EU=new A.yt(3,"select")
 B.tY=A.b(s([B.ES,B.nY,B.ET,B.EU]),A.a6("A<yt>"))
-B.Xr=A.b(s(["svs","tiff","tif","sdpc"]),t.s)
 B.eK=new A.kT(0,"controlModifier")
 B.eL=new A.kT(1,"shiftModifier")
 B.eM=new A.kT(2,"altModifier")
@@ -134375,6 +134374,7 @@ B.n8=new A.kT(6,"scrollLockModifier")
 B.n9=new A.kT(7,"functionModifier")
 B.ze=new A.kT(8,"symbolModifier")
 B.tZ=A.b(s([B.eK,B.eL,B.eM,B.eN,B.n6,B.n7,B.n8,B.n9,B.ze]),A.a6("A<kT>"))
+B.Xr=A.b(s(["svs","tiff","tif","sdpc","kfb"]),t.s)
 B.Xs=A.b(s([73,67,67,95,80,82,79,70,73,76,69,0]),t.t)
 B.mM=A.b(s([!0,!1]),t.HZ)
 B.zj=new A.tA(0,"beginTransaction")
