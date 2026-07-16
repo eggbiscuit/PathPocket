@@ -19,8 +19,9 @@ services:
     build:
       context: .
       args:
-        # Set ENABLE_SDPC=1 (x86_64 only) to build in Sqray .sdpc support.
+        # Set to 1 (x86_64 only) to build in the proprietary readers.
         ENABLE_SDPC: ${ENABLE_SDPC:-0}
+        ENABLE_KFB: ${ENABLE_KFB:-0}
     depends_on:
       db:
         condition: service_healthy

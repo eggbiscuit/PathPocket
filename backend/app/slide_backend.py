@@ -1,15 +1,15 @@
-"""Slide opening abstraction over OpenSlide + the proprietary sdpc format.
+"""Slide opening abstraction over OpenSlide + proprietary vendor formats.
 
-OpenSlide reads .svs/.tiff/.ndpi/etc. The Sqray .sdpc format needs the vendor's
-`opensdpc` library, which ships an x86_64-only native lib — so it may be
-unavailable (e.g. on arm dev machines). `sdpc_available()` probes that at import
-time; callers gate on it and fall back to "unsupported" when it's False.
+OpenSlide reads .svs/.tiff/.ndpi/etc. Two vendor formats need extra native libs,
+both x86_64-only, so they may be unavailable (e.g. on arm dev machines):
 
-SdpcSlide adapts an opensdpc handle to the subset of the OpenSlide interface that
-`openslide.deepzoom.DeepZoomGenerator` and our tile/thumbnail code rely on:
-`dimensions`, `properties`, `level_dimensions`, `level_downsamples`,
-`level_count`, `get_best_level_for_downsample`, `read_region` (RGBA), and
-`get_thumbnail`.
+- .sdpc (Sqray) via `opensdpc` — adapted by SdpcSlide (see below).
+- .kfb (KFBIO) via ASlide's `KfbSlide`, which already subclasses
+  openslide.AbstractSlide and returns RGBA tiles, so it feeds DeepZoomGenerator
+  directly with no adapter.
+
+`sdpc_available()` / `kfb_available()` probe their libs at import time; callers
+gate on them and fall back to "unsupported" when False.
 """
 
 import os
@@ -18,6 +18,7 @@ import openslide
 from PIL import Image
 
 _SDPC_EXT = ".sdpc"
+_KFB_EXT = ".kfb"
 _OPENSLIDE_EXT = {".svs", ".tif", ".tiff", ".ndpi", ".scn", ".mrxs", ".vms", ".vmu", ".bif"}
 
 # Probe opensdpc once. The native lib load happens at import, so a failure here
@@ -31,6 +32,16 @@ except Exception as exc:  # ImportError, OSError (dlopen), etc.
     _SDPC_AVAILABLE = False
     _SDPC_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
 
+# Probe ASlide's KFB reader once (bundled native .so loaded at import).
+try:
+    from Aslide.kfb.kfb_slide import KfbSlide  # noqa: F401
+
+    _KFB_AVAILABLE = True
+    _KFB_IMPORT_ERROR = ""
+except Exception as exc:
+    _KFB_AVAILABLE = False
+    _KFB_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
+
 
 def sdpc_available() -> bool:
     return _SDPC_AVAILABLE
@@ -38,6 +49,14 @@ def sdpc_available() -> bool:
 
 def sdpc_import_error() -> str:
     return _SDPC_IMPORT_ERROR
+
+
+def kfb_available() -> bool:
+    return _KFB_AVAILABLE
+
+
+def kfb_import_error() -> str:
+    return _KFB_IMPORT_ERROR
 
 
 class SdpcSlide:
@@ -112,6 +131,8 @@ def can_open(ext: str) -> bool:
         return True
     if ext == _SDPC_EXT:
         return _SDPC_AVAILABLE
+    if ext == _KFB_EXT:
+        return _KFB_AVAILABLE
     return False
 
 
@@ -122,16 +143,20 @@ def open_slide(path: str):
         if not _SDPC_AVAILABLE:
             raise RuntimeError("sdpc backend unavailable in this environment")
         return SdpcSlide(path)
+    if ext == _KFB_EXT:
+        if not _KFB_AVAILABLE:
+            raise RuntimeError("kfb backend unavailable in this environment")
+        return KfbSlide(path)
     return openslide.OpenSlide(path)
 
 
 def probe(path: str) -> tuple[str, tuple[int, int]]:
     """Detect format + level-0 dimensions. Blocking — call in a threadpool."""
     ext = os.path.splitext(path)[1].lower()
-    if ext == _SDPC_EXT:
+    if ext in (_SDPC_EXT, _KFB_EXT):
         slide = open_slide(path)
         try:
-            return "sdpc", slide.dimensions
+            return ext.lstrip("."), slide.dimensions
         finally:
             slide.close()
     fmt = openslide.OpenSlide.detect_format(path)

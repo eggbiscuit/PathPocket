@@ -17,10 +17,10 @@ from ..security import get_current_user, get_current_user_id
 router = APIRouter(prefix="/wsi", tags=["wsi"])
 _settings = get_settings()
 
-# .kfb (江丰) has no open reader yet; .sdpc (生强) needs the opensdpc native lib,
-# which is x86_64-only — accepted only when that backend loaded successfully.
-_KFB_EXT = ".kfb"
+# .sdpc (生强) and .kfb (江丰) need x86_64-only native libs, accepted only when
+# their backend loaded successfully (see slide_backend.{sdpc,kfb}_available).
 _SDPC_EXT = ".sdpc"
+_KFB_EXT = ".kfb"
 
 
 async def _owned_slide(session: AsyncSession, slide_id: str, user_id: str) -> Slide:
@@ -40,17 +40,17 @@ async def upload_slide(
 ):
     name = file.filename or "upload"
     ext = os.path.splitext(name)[1].lower()
-    if ext == _KFB_EXT:
-        raise app_error(
-            415,
-            "UNSUPPORTED_FORMAT",
-            "江丰 KFBIO 格式（.kfb）暂不支持，后续将通过转码支持。当前请上传 .svs / .tiff / .sdpc。",
-        )
     if ext == _SDPC_EXT and not slide_backend.sdpc_available():
         raise app_error(
             415,
             "UNSUPPORTED_FORMAT",
             "当前服务未启用 .sdpc 支持（需 x86_64 环境）。请上传 .svs / .tiff。",
+        )
+    if ext == _KFB_EXT and not slide_backend.kfb_available():
+        raise app_error(
+            415,
+            "UNSUPPORTED_FORMAT",
+            "当前服务未启用 .kfb 支持（需 x86_64 环境）。请上传 .svs / .tiff。",
         )
     if not slide_backend.can_open(ext):
         raise app_error(415, "UNSUPPORTED_FORMAT", "不支持的切片格式")
