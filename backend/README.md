@@ -27,6 +27,11 @@ cp .env.example .env
 | `CORS_ORIGINS` | 逗号分隔的允许来源，**必须包含前端站点域名**（如 `https://smartpath-evidence.site.ngrok.app`） |
 | `CORS_ORIGIN_REGEX` | 可选。匹配动态来源（如轮换的 ngrok 子域），例 `^https://.*\.ngrok\.app$`；留空禁用 |
 | `SMTP_*` | 可选。未配置时验证邮件链接打印到控制台 |
+| `DASHSCOPE_API_KEY` | 阿里云百炼 API Key，语音输入（`/asr/stream`）用。未设置时该接口会返回错误但不影响其他功能 |
+| `ASR_MODEL` | 语音识别模型，默认 `paraformer-realtime-v2` |
+| `ASR_VOCABULARY_ID` | 可选。病理术语热词表 ID，留空禁用 |
+
+> Docker Compose 需要这三个变量在启动 `docker-compose up` 前已存在于 shell 或 `backend/.env`（compose 会自动读取 `.env` 做变量替换），否则容器里 `DASHSCOPE_API_KEY` 为空，语音识别会报错。
 
 > CORS 注意：`allow_origins=["*"]` 与 `allow_credentials=True` 不兼容；需要通配时用 `CORS_ORIGIN_REGEX`。
 

@@ -11,7 +11,7 @@ logger = logging.getLogger("pathpocket")
 from .config import get_settings
 from .database import SessionLocal, create_all
 from .models import User, UserRole, UserStatus
-from .routers import admin, auth, wsi
+from .routers import admin, asr, auth, wsi
 from .security import get_user_by_email, hash_password
 
 settings = get_settings()
@@ -77,6 +77,7 @@ app.add_middleware(CORSMiddleware, **_cors)
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(wsi.router)
+app.include_router(asr.router)
 
 
 @app.get("/health", tags=["meta"])

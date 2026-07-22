@@ -8,6 +8,10 @@ const String backendBaseUrl = String.fromEnvironment(
   'BACKEND_BASE_URL',
   defaultValue: 'http://localhost:8000',
 );
+
+// WebSocket base for the /asr streaming endpoint — http→ws, https→wss.
+String get backendWsUrl =>
+    backendBaseUrl.replaceFirst(RegExp(r'^http'), 'ws');
 const String apiEndpoint = 'https://api.openai.com/v1/chat/completions';
 const String apiKey = 'YOUR_API_KEY'; // replace with your OpenAI key
 const String model = 'gpt-4o';

@@ -71,8 +71,10 @@ dependencies:
   crop_your_image: ^2.0.0       # ROI cropper (pure Dart, works on Web)
   photo_view: ^0.15.0           # full-screen pinch-zoom viewer
 
-  # Voice input — Phase 3 (iOS / Android only)
-  speech_to_text: ^7.0.0
+  # Voice input — streams PCM16 to the backend /asr proxy (Aliyun DashScope),
+  # works on Web + mobile (unlike speech_to_text's browser cloud STT).
+  record: ^6.2.1                # cross-platform recorder, PCM16 streaming
+  web_socket_channel: ^3.0.3    # WS client (Dio doesn't do WebSockets)
   permission_handler: ^11.3.1   # mic permission status + open app settings
 
   # Typography — DM Sans + DM Serif Display

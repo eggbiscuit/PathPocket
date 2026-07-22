@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "PathPocket <no-reply@pathpocket.dev>"
 
+    # ASR (speech-to-text) — Aliyun Bailian / DashScope. The key stays server-side
+    # only; the Flutter client streams audio through /asr/stream and never sees it.
+    dashscope_api_key: str = ""
+    # Switch to "fun-asr-realtime" (large-model, ~40% pricier, better term
+    # robustness) by changing only this line — the SDK interface is identical.
+    asr_model: str = "paraformer-realtime-v2"
+    # Custom hotword vocabulary id for pathology terms. Empty disables hotwords.
+    asr_vocabulary_id: str = ""
+
     # WSI (whole-slide image) storage + tiling.
     wsi_storage_dir: str = "/data/wsi"
     wsi_max_upload_bytes: int = 2 * 1024**3  # 2 GiB hard cap
